@@ -93,6 +93,9 @@ ComfyUI/models/
 [`docs/SMOKE_TESTS.md`](docs/SMOKE_TESTS.md) 和
 [`docs/LOW_MEMORY_WEIGHTS.md`](docs/LOW_MEMORY_WEIGHTS.md)。
 
+原生 Core 实现已提交到
+[ComfyUI PR #16001](https://github.com/Comfy-Org/ComfyUI/pull/16001)。
+
 ### 自己转换权重
 
 如果不想下载重打包权重，可以从官方
@@ -150,9 +153,10 @@ be tested on a 24 GB GPU.
 ### Development and Core work
 
 The implementation is covered by unit, workflow, real-weight quality, memory,
-and repeat-run tests. The upstream Core request is tracked in
-[ComfyUI issue #15702](https://github.com/Comfy-Org/ComfyUI/issues/15702).
-Core readiness notes live in
+and repeat-run tests. The native Core implementation is submitted as
+[ComfyUI PR #16001](https://github.com/Comfy-Org/ComfyUI/pull/16001), closing
+[issue #15702](https://github.com/Comfy-Org/ComfyUI/issues/15702). Review notes
+live in
 [`docs/CORE_MERGE_PLAN.md`](docs/CORE_MERGE_PLAN.md).
 
 ```powershell

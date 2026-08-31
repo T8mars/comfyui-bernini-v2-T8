@@ -1,5 +1,10 @@
 # ComfyUI Core merge plan
 
+The native Core implementation is now under review in
+[ComfyUI PR #16001](https://github.com/Comfy-Org/ComfyUI/pull/16001). The
+sections below record its implementation shape, validation evidence, and known
+follow-up work.
+
 This repository is deliberately structured as a proving ground, not as the
 final Core diff. The model runs through Comfy model patchers, the native Wan
 implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
@@ -34,7 +39,7 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
    - Document official task presets, model placement, memory expectations, and
      the raw-checkpoint repack step.
 
-## Review gates before opening a PR
+## Submission status and review gates
 
 - Minimal end-to-end generation and production-setting visual baselines pass on
   the pinned official BF16 checkpoint for all six tasks. Conditional-video
@@ -54,14 +59,14 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
   640x368/33-frame jobs in one process and returns host and device memory to
   baseline. Repeat BF16, current-CUDA/Linux lifecycle, interrupted download,
   and interrupted repack paths still need dedicated tests.
-- Code is rebased onto current ComfyUI and split into reviewable commits.
+- Code is rebased onto current ComfyUI and submitted as one self-contained
+  review commit.
 
 ## Known upstream-facing compatibility items
 
-- ComfyUI 0.33.0's Qwen vision RoPE computes Q/K in FP32 but does not restore
-  their original dtype before SDPA. The plugin carries an instance-local bridge
-  matching ByteDance's implementation. The Core patch should make that cast in
-  the shared Qwen vision implementation and delete the bridge.
+- ComfyUI's shared Qwen vision RoPE previously computed Q/K in FP32 without
+  restoring their original dtype before SDPA. PR #16001 restores the input
+  dtypes in the shared implementation, so the Core port needs no private bridge.
 - PyTorch 2.7 on the verified Windows host uses Comfy's legacy ModelPatcher.
   Repeat lifecycle and memory tests on the current supported PyTorch/CUDA stack.
   The compatibility lane now has balanced-INT8 repeat evidence plus a
@@ -80,5 +85,5 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
   GB development hosts can exercise the complete path. The distinction must be
   called out when preparing an upstream diff.
 
-No PR, issue comment, or upstream notification should be made until these gates
-are complete and the owner explicitly approves submission.
+PR #16001 is the authoritative upstream review. Further changes should respond
+to review or CI evidence there instead of reopening a parallel implementation.
