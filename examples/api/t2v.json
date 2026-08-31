@@ -1,0 +1,249 @@
+{
+  "1": {
+    "inputs": {
+      "repack_manifest": "Bernini-v2-bf16/repack-manifest.json",
+      "dtype": "bfloat16"
+    },
+    "class_type": "BerniniV2PlannerLoader",
+    "_meta": {
+      "title": "Load Bernini v2 Planner"
+    }
+  },
+  "2": {
+    "inputs": {
+      "repack_manifest": "Bernini-v2-bf16/repack-manifest.json",
+      "dtype": "bfloat16"
+    },
+    "class_type": "BerniniV2T5Loader",
+    "_meta": {
+      "title": "Load Bernini v2 T5"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": "You are a helpful assistant specialized in text-to-video generation.A red fox walks through fresh snow at sunrise, cinematic camera movement.",
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive UMT5"
+    }
+  },
+  "4": {
+    "inputs": {
+      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative UMT5"
+    }
+  },
+  "5": {
+    "inputs": {
+      "model_index": "Bernini-v2-bf16/wan_high/model.safetensors.index.json",
+      "flow_shift": 5.0,
+      "weight_dtype": "bfloat16"
+    },
+    "class_type": "BerniniV2WanLoader",
+    "_meta": {
+      "title": "Load High-noise Renderer"
+    }
+  },
+  "6": {
+    "inputs": {
+      "model_index": "Bernini-v2-bf16/wan_low/model.safetensors.index.json",
+      "flow_shift": 5.0,
+      "weight_dtype": "bfloat16"
+    },
+    "class_type": "BerniniV2WanLoader",
+    "_meta": {
+      "title": "Load Low-noise Renderer"
+    }
+  },
+  "7": {
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load Wan VAE"
+    }
+  },
+  "11": {
+    "inputs": {
+      "planner": [
+        "1",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "prompt": "A red fox walks through fresh snow at sunrise, cinematic camera movement.",
+      "negative_prompt": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "task": "t2v",
+      "width": 848,
+      "height": 480,
+      "length": 81,
+      "source_fps": 16.0,
+      "use_task_defaults": true,
+      "match_source_size": false,
+      "max_media_size": 848,
+      "planning_steps": 25,
+      "vit_denoising_steps": 5,
+      "vit_text_cfg": 1.2,
+      "vit_image_cfg": 1.0,
+      "seed": 42
+    },
+    "class_type": "BerniniV2Plan",
+    "_meta": {
+      "title": "Bernini v2 Plan"
+    }
+  },
+  "12": {
+    "inputs": {
+      "plan": [
+        "11",
+        0
+      ],
+      "high_noise_model": [
+        "5",
+        0
+      ],
+      "low_noise_model": [
+        "6",
+        0
+      ],
+      "vae": [
+        "7",
+        0
+      ],
+      "omega_video": 1.25,
+      "omega_image": 3.0,
+      "omega_text": 4.0,
+      "omega_target": 1.2,
+      "omega_scale": 0.75,
+      "use_task_defaults": true,
+      "boundary": 0.875
+    },
+    "class_type": "BerniniV2RendererGuider",
+    "_meta": {
+      "title": "Bernini v2 Dual-expert Guider"
+    }
+  },
+  "13": {
+    "inputs": {
+      "plan": [
+        "11",
+        0
+      ],
+      "steps": 40,
+      "flow_shift": 5.0,
+      "use_task_defaults": true
+    },
+    "class_type": "BerniniV2Scheduler",
+    "_meta": {
+      "title": "Bernini v2 UniPC Sigmas"
+    }
+  },
+  "14": {
+    "inputs": {
+      "noise_seed": 42
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "Random Noise"
+    }
+  },
+  "15": {
+    "inputs": {},
+    "class_type": "BerniniV2UniPCSampler",
+    "_meta": {
+      "title": "Bernini v2 Flow UniPC BH2"
+    }
+  },
+  "16": {
+    "inputs": {
+      "noise": [
+        "14",
+        0
+      ],
+      "guider": [
+        "12",
+        0
+      ],
+      "sampler": [
+        "15",
+        0
+      ],
+      "sigmas": [
+        "13",
+        0
+      ],
+      "latent_image": [
+        "12",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "Sample Bernini v2"
+    }
+  },
+  "17": {
+    "inputs": {
+      "samples": [
+        "16",
+        0
+      ],
+      "vae": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "Decode Wan Latent"
+    }
+  },
+  "18": {
+    "inputs": {
+      "images": [
+        "17",
+        0
+      ],
+      "fps": 16.0,
+      "bit_depth": 8
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create 16 fps Video"
+    }
+  },
+  "19": {
+    "inputs": {
+      "video": [
+        "18",
+        0
+      ],
+      "filename_prefix": "video/Bernini-v2/t2v",
+      "format": "mp4",
+      "format.codec": "h264"
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Save Bernini Video"
+    }
+  }
+}

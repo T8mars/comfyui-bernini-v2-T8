@@ -1,0 +1,7 @@
+# Verification outputs and development-only files are kept in GitHub but are
+# not needed by ComfyUI at runtime.
+artifacts/
+tests/
+.github/
+.pytest_cache/
+.ruff_cache/

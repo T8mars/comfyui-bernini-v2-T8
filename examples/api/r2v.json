@@ -1,0 +1,262 @@
+{
+  "1": {
+    "inputs": {
+      "repack_manifest": "Bernini-v2-bf16/repack-manifest.json",
+      "dtype": "bfloat16"
+    },
+    "class_type": "BerniniV2PlannerLoader",
+    "_meta": {
+      "title": "Load Bernini v2 Planner"
+    }
+  },
+  "2": {
+    "inputs": {
+      "repack_manifest": "Bernini-v2-bf16/repack-manifest.json",
+      "dtype": "bfloat16"
+    },
+    "class_type": "BerniniV2T5Loader",
+    "_meta": {
+      "title": "Load Bernini v2 T5"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": "You are a helpful assistant specialized in subject-to-video generation.The referenced subject walks through fresh snow at sunrise, cinematic camera movement.",
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive UMT5"
+    }
+  },
+  "4": {
+    "inputs": {
+      "text": "vivid tones, overexposed, static, blurry details, subtitles, style, artwork, painting, image, motionless, overall grayish, worst quality, low quality, JPEG compression artifacts, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, malformed limbs, fused fingers, still frame, cluttered background, three legs, too many people in the background, walking backwards",
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative UMT5"
+    }
+  },
+  "5": {
+    "inputs": {
+      "model_index": "Bernini-v2-bf16/wan_high/model.safetensors.index.json",
+      "flow_shift": 5.0,
+      "weight_dtype": "bfloat16"
+    },
+    "class_type": "BerniniV2WanLoader",
+    "_meta": {
+      "title": "Load High-noise Renderer"
+    }
+  },
+  "6": {
+    "inputs": {
+      "model_index": "Bernini-v2-bf16/wan_low/model.safetensors.index.json",
+      "flow_shift": 5.0,
+      "weight_dtype": "bfloat16"
+    },
+    "class_type": "BerniniV2WanLoader",
+    "_meta": {
+      "title": "Load Low-noise Renderer"
+    }
+  },
+  "7": {
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load Wan VAE"
+    }
+  },
+  "8": {
+    "inputs": {
+      "image": "bernini_reference.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Reference Image"
+    }
+  },
+  "11": {
+    "inputs": {
+      "planner": [
+        "1",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "4",
+        0
+      ],
+      "prompt": "The referenced subject walks through fresh snow at sunrise, cinematic camera movement.",
+      "negative_prompt": "vivid tones, overexposed, static, blurry details, subtitles, style, artwork, painting, image, motionless, overall grayish, worst quality, low quality, JPEG compression artifacts, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, malformed limbs, fused fingers, still frame, cluttered background, three legs, too many people in the background, walking backwards",
+      "task": "r2v",
+      "width": 848,
+      "height": 480,
+      "length": 81,
+      "source_fps": 16.0,
+      "use_task_defaults": true,
+      "match_source_size": false,
+      "max_media_size": 848,
+      "planning_steps": 25,
+      "vit_denoising_steps": 5,
+      "vit_text_cfg": 1.2,
+      "vit_image_cfg": 1.0,
+      "seed": 42,
+      "reference_images.reference_image_0": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "BerniniV2Plan",
+    "_meta": {
+      "title": "Bernini v2 Plan"
+    }
+  },
+  "12": {
+    "inputs": {
+      "plan": [
+        "11",
+        0
+      ],
+      "high_noise_model": [
+        "5",
+        0
+      ],
+      "low_noise_model": [
+        "6",
+        0
+      ],
+      "vae": [
+        "7",
+        0
+      ],
+      "omega_video": 1.25,
+      "omega_image": 3.0,
+      "omega_text": 4.0,
+      "omega_target": 1.2,
+      "omega_scale": 0.75,
+      "use_task_defaults": true,
+      "boundary": 0.875
+    },
+    "class_type": "BerniniV2RendererGuider",
+    "_meta": {
+      "title": "Bernini v2 Dual-expert Guider"
+    }
+  },
+  "13": {
+    "inputs": {
+      "plan": [
+        "11",
+        0
+      ],
+      "steps": 40,
+      "flow_shift": 5.0,
+      "use_task_defaults": true
+    },
+    "class_type": "BerniniV2Scheduler",
+    "_meta": {
+      "title": "Bernini v2 UniPC Sigmas"
+    }
+  },
+  "14": {
+    "inputs": {
+      "noise_seed": 42
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "Random Noise"
+    }
+  },
+  "15": {
+    "inputs": {},
+    "class_type": "BerniniV2UniPCSampler",
+    "_meta": {
+      "title": "Bernini v2 Flow UniPC BH2"
+    }
+  },
+  "16": {
+    "inputs": {
+      "noise": [
+        "14",
+        0
+      ],
+      "guider": [
+        "12",
+        0
+      ],
+      "sampler": [
+        "15",
+        0
+      ],
+      "sigmas": [
+        "13",
+        0
+      ],
+      "latent_image": [
+        "12",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "Sample Bernini v2"
+    }
+  },
+  "17": {
+    "inputs": {
+      "samples": [
+        "16",
+        0
+      ],
+      "vae": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "Decode Wan Latent"
+    }
+  },
+  "18": {
+    "inputs": {
+      "images": [
+        "17",
+        0
+      ],
+      "fps": 16.0,
+      "bit_depth": 8
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create 16 fps Video"
+    }
+  },
+  "19": {
+    "inputs": {
+      "video": [
+        "18",
+        0
+      ],
+      "filename_prefix": "video/Bernini-v2/r2v",
+      "format": "mp4",
+      "format.codec": "h264"
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Save Bernini Video"
+    }
+  }
+}

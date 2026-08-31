@@ -1,0 +1,1021 @@
+{
+  "id": "9bcd44d9-6731-5e9b-a0a7-139b62475993",
+  "revision": 0,
+  "last_node_id": 19,
+  "last_link_id": 22,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "BerniniV2PlannerLoader",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        350,
+        110
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "planner",
+          "type": "BERNINI_V2_PLANNER",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BerniniV2PlannerLoader"
+      },
+      "widgets_values": [
+        "Bernini-v2-bf16/repack-manifest.json",
+        "bfloat16"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "BerniniV2T5Loader",
+      "pos": [
+        0,
+        150
+      ],
+      "size": [
+        350,
+        110
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1,
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BerniniV2T5Loader"
+      },
+      "widgets_values": [
+        "Bernini-v2-bf16/repack-manifest.json",
+        "bfloat16"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "BerniniV2WanLoader",
+      "pos": [
+        0,
+        300
+      ],
+      "size": [
+        350,
+        130
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            10
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BerniniV2WanLoader"
+      },
+      "widgets_values": [
+        "Bernini-v2-bf16/wan_high/model.safetensors.index.json",
+        5.0,
+        "bfloat16"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "BerniniV2WanLoader",
+      "pos": [
+        0,
+        470
+      ],
+      "size": [
+        350,
+        130
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BerniniV2WanLoader"
+      },
+      "widgets_values": [
+        "Bernini-v2-bf16/wan_low/model.safetensors.index.json",
+        5.0,
+        "bfloat16"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "VAELoader",
+      "pos": [
+        0,
+        640
+      ],
+      "size": [
+        350,
+        90
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            12,
+            20
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "wan_2.1_vae.safetensors"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "CLIPTextEncode",
+      "pos": [
+        420,
+        0
+      ],
+      "size": [
+        460,
+        190
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "You are a helpful assistant specialized in video editing with reference.Replace the source-video subject with the referenced subject while preserving motion and framing."
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "pos": [
+        420,
+        230
+      ],
+      "size": [
+        460,
+        220
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "LoadImage",
+      "pos": [
+        420,
+        500
+      ],
+      "size": [
+        340,
+        260
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            8
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "bernini_reference.png",
+        "image"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "LoadVideo",
+      "pos": [
+        780,
+        500
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadVideo"
+      },
+      "widgets_values": [
+        "bernini_source.mp4"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "GetVideoComponents",
+      "pos": [
+        780,
+        660
+      ],
+      "size": [
+        340,
+        150
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            7
+          ]
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "bit_depth",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "color_space",
+          "type": "COMBO",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GetVideoComponents"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "BerniniV2Plan",
+      "pos": [
+        950,
+        0
+      ],
+      "size": [
+        410,
+        720
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "planner",
+          "type": "BERNINI_V2_PLANNER",
+          "link": 4
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 5
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "source_video",
+          "type": "IMAGE",
+          "link": 7
+        },
+        {
+          "name": "reference_images.reference_image_0",
+          "type": "IMAGE",
+          "link": 8,
+          "label": "reference image 1",
+          "localized_name": "reference image 1"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "plan",
+          "type": "BERNINI_V2_PLAN",
+          "links": [
+            9,
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BerniniV2Plan"
+      },
+      "widgets_values": [
+        "Replace the source-video subject with the referenced subject while preserving motion and framing.",
+        "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+        "rv2v",
+        848,
+        480,
+        81,
+        16.0,
+        true,
+        true,
+        848,
+        25,
+        5,
+        1.2,
+        1.0,
+        42
+      ]
+    },
+    {
+      "id": 12,
+      "type": "BerniniV2RendererGuider",
+      "pos": [
+        1430,
+        0
+      ],
+      "size": [
+        360,
+        390
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "plan",
+          "type": "BERNINI_V2_PLAN",
+          "link": 9
+        },
+        {
+          "name": "high_noise_model",
+          "type": "MODEL",
+          "link": 10
+        },
+        {
+          "name": "low_noise_model",
+          "type": "MODEL",
+          "link": 11
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "name": "guider",
+          "type": "GUIDER",
+          "links": [
+            15
+          ]
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BerniniV2RendererGuider"
+      },
+      "widgets_values": [
+        1.25,
+        3.0,
+        4.0,
+        1.2,
+        0.75,
+        true,
+        0.875
+      ]
+    },
+    {
+      "id": 13,
+      "type": "BerniniV2Scheduler",
+      "pos": [
+        1430,
+        430
+      ],
+      "size": [
+        360,
+        180
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "plan",
+          "type": "BERNINI_V2_PLAN",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SIGMAS",
+          "type": "SIGMAS",
+          "links": [
+            17
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BerniniV2Scheduler"
+      },
+      "widgets_values": [
+        40,
+        5.0,
+        true
+      ]
+    },
+    {
+      "id": 14,
+      "type": "RandomNoise",
+      "pos": [
+        1430,
+        650
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "NOISE",
+          "type": "NOISE",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RandomNoise"
+      },
+      "widgets_values": [
+        42,
+        "fixed"
+      ]
+    },
+    {
+      "id": 15,
+      "type": "BerniniV2UniPCSampler",
+      "pos": [
+        1430,
+        790
+      ],
+      "size": [
+        300,
+        70
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "SAMPLER",
+          "type": "SAMPLER",
+          "links": [
+            16
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BerniniV2UniPCSampler"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 16,
+      "type": "SamplerCustomAdvanced",
+      "pos": [
+        1850,
+        0
+      ],
+      "size": [
+        320,
+        240
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "noise",
+          "type": "NOISE",
+          "link": 14
+        },
+        {
+          "name": "guider",
+          "type": "GUIDER",
+          "link": 15
+        },
+        {
+          "name": "sampler",
+          "type": "SAMPLER",
+          "link": 16
+        },
+        {
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 17
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "LATENT",
+          "links": [
+            19
+          ]
+        },
+        {
+          "name": "denoised_output",
+          "type": "LATENT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SamplerCustomAdvanced"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 17,
+      "type": "VAEDecode",
+      "pos": [
+        1850,
+        290
+      ],
+      "size": [
+        300,
+        90
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 19
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 20
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            21
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 18,
+      "type": "CreateVideo",
+      "pos": [
+        1850,
+        430
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 21
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            22
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CreateVideo"
+      },
+      "widgets_values": [
+        16.0,
+        8
+      ]
+    },
+    {
+      "id": 19,
+      "type": "SaveVideo",
+      "pos": [
+        1850,
+        610
+      ],
+      "size": [
+        320,
+        250
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "link": 22
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveVideo"
+      },
+      "widgets_values": [
+        "video/Bernini-v2/rv2v",
+        "mp4",
+        "h264"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      3,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      2,
+      0,
+      4,
+      0,
+      "CLIP"
+    ],
+    [
+      3,
+      9,
+      0,
+      10,
+      0,
+      "VIDEO"
+    ],
+    [
+      4,
+      1,
+      0,
+      11,
+      0,
+      "BERNINI_V2_PLANNER"
+    ],
+    [
+      5,
+      3,
+      0,
+      11,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      4,
+      0,
+      11,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      10,
+      0,
+      11,
+      3,
+      "IMAGE"
+    ],
+    [
+      8,
+      8,
+      0,
+      11,
+      4,
+      "IMAGE"
+    ],
+    [
+      9,
+      11,
+      0,
+      12,
+      0,
+      "BERNINI_V2_PLAN"
+    ],
+    [
+      10,
+      5,
+      0,
+      12,
+      1,
+      "MODEL"
+    ],
+    [
+      11,
+      6,
+      0,
+      12,
+      2,
+      "MODEL"
+    ],
+    [
+      12,
+      7,
+      0,
+      12,
+      3,
+      "VAE"
+    ],
+    [
+      13,
+      11,
+      0,
+      13,
+      0,
+      "BERNINI_V2_PLAN"
+    ],
+    [
+      14,
+      14,
+      0,
+      16,
+      0,
+      "NOISE"
+    ],
+    [
+      15,
+      12,
+      0,
+      16,
+      1,
+      "GUIDER"
+    ],
+    [
+      16,
+      15,
+      0,
+      16,
+      2,
+      "SAMPLER"
+    ],
+    [
+      17,
+      13,
+      0,
+      16,
+      3,
+      "SIGMAS"
+    ],
+    [
+      18,
+      12,
+      1,
+      16,
+      4,
+      "LATENT"
+    ],
+    [
+      19,
+      16,
+      0,
+      17,
+      0,
+      "LATENT"
+    ],
+    [
+      20,
+      7,
+      0,
+      17,
+      1,
+      "VAE"
+    ],
+    [
+      21,
+      17,
+      0,
+      18,
+      0,
+      "IMAGE"
+    ],
+    [
+      22,
+      18,
+      0,
+      19,
+      0,
+      "VIDEO"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "1. BF16 model loaders",
+      "bounding": [
+        -40,
+        -80,
+        430,
+        850
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "2. Prompts and source media",
+      "bounding": [
+        390,
+        -80,
+        520,
+        850
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    },
+    {
+      "id": 3,
+      "title": "3. Bernini semantic plan",
+      "bounding": [
+        910,
+        -80,
+        480,
+        850
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    },
+    {
+      "id": 4,
+      "title": "4. Flow UniPC render and save",
+      "bounding": [
+        1390,
+        -80,
+        850,
+        970
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.62,
+      "offset": [
+        70,
+        120
+      ]
+    },
+    "frontendVersion": "1.49.6",
+    "info": {
+      "name": "Bernini v2 RV2V",
+      "author": "ComfyUI-BerniniV2",
+      "description": "Official task defaults, BF16 weights, and flow-prediction UniPC BH2."
+    }
+  },
+  "version": 0.4
+}

@@ -1,0 +1,13 @@
+.upstream/
+.model-download/
+models/
+repacked/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.publish-env/
+node.zip
+*.py[cod]
+*.log
+*.pid
+*.tmp
