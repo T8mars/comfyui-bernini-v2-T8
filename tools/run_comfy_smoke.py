@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -12,6 +13,11 @@ from collections.abc import Callable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from bernini_v2.presets import task_preset  # noqa: E402
+
 WORKFLOW_DIR = ROOT / "examples" / "api"
 TASKS = ("t2i", "i2i", "t2v", "v2v", "r2v", "rv2v")
 
@@ -42,6 +48,7 @@ def prepare_graph(
         graph["5"]["inputs"]["model_index"] = f"{repack_root}/wan_high/model.safetensors.index.json"
         graph["6"]["inputs"]["model_index"] = f"{repack_root}/wan_low/model.safetensors.index.json"
     plan = graph["11"]["inputs"]
+    preset = task_preset(task)
     plan.update(
         {
             "width": width,
@@ -53,7 +60,16 @@ def prepare_graph(
             "vit_denoising_steps": vit_denoising_steps,
         }
     )
-    graph["12"]["inputs"]["use_task_defaults"] = False
+    graph["12"]["inputs"].update(
+        {
+            "omega_video": preset["omega_video"],
+            "omega_image": preset["omega_image"],
+            "omega_text": preset["omega_text"],
+            "omega_target": preset["omega_target"],
+            "omega_scale": preset["omega_scale"],
+            "use_task_defaults": False,
+        }
+    )
     graph["13"]["inputs"].update({"steps": renderer_steps, "use_task_defaults": False})
 
     if task in {"i2i", "r2v", "rv2v"}:

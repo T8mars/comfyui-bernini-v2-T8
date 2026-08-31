@@ -17,6 +17,12 @@ def test_prepare_graph_overrides_every_task_without_mutating_examples():
         assert plan["length"] == (1 if task in {"t2i", "i2i"} else 5)
         assert plan["use_task_defaults"] is False
         assert graph["12"]["inputs"]["use_task_defaults"] is False
+        preset = MODULE.task_preset(task)
+        assert graph["12"]["inputs"]["omega_video"] == preset["omega_video"]
+        assert graph["12"]["inputs"]["omega_image"] == preset["omega_image"]
+        assert graph["12"]["inputs"]["omega_text"] == preset["omega_text"]
+        assert graph["12"]["inputs"]["omega_target"] == preset["omega_target"]
+        assert graph["12"]["inputs"]["omega_scale"] == preset["omega_scale"]
         assert graph["13"]["inputs"]["steps"] == 3
 
 
