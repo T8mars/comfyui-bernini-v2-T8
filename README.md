@@ -55,6 +55,11 @@ capacity first.
 
 ## Development
 
+The following commands require a GitHub checkout. Development-only workflow
+builders and regression runners are intentionally excluded from the Registry
+archive so ComfyUI-Manager installs contain only runtime and model-preparation
+utilities.
+
 ```powershell
 python tools/download_model.py --metadata-only
 python tools/repack_diffusers.py --source models/ByteDance/Bernini-Diffusers-v2 --dry-run
