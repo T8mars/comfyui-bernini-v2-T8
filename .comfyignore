@@ -8,7 +8,7 @@ tests/
 
 # Repository-only workflow generation and regression runners. These are not
 # needed at runtime, and packaging them causes false-positive Registry network
-# findings (for graph.connect(...) and localhost smoke-test HTTP calls).
+# findings from development graph wiring and localhost smoke-test HTTP calls.
 tools/build_example_workflows.py
 tools/build_frontend_workflows.py
 tools/run_comfy_smoke.py
