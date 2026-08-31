@@ -2,7 +2,7 @@
   "id": "9110f954-92b9-5635-8271-da48061e6a49",
   "revision": 0,
   "last_node_id": 19,
-  "last_link_id": 21,
+  "last_link_id": 20,
   "nodes": [
     {
       "id": 1,
@@ -24,7 +24,7 @@
           "name": "planner",
           "type": "BERNINI_V2_PLANNER",
           "links": [
-            4
+            3
           ]
         }
       ],
@@ -32,7 +32,7 @@
         "Node name for S&R": "BerniniV2PlannerLoader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/repack-manifest.json",
+        "Bernini-v2-balanced-int8/repack-manifest.json",
         "bfloat16"
       ]
     },
@@ -65,7 +65,7 @@
         "Node name for S&R": "BerniniV2T5Loader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/repack-manifest.json",
+        "Bernini-v2-balanced-int8/repack-manifest.json",
         "bfloat16"
       ]
     },
@@ -89,7 +89,7 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            9
+            8
           ]
         }
       ],
@@ -97,7 +97,7 @@
         "Node name for S&R": "BerniniV2WanLoader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/wan_high/model.safetensors.index.json",
+        "Bernini-v2-balanced-int8/wan_high/model.safetensors.index.json",
         5.0,
         "bfloat16"
       ]
@@ -122,7 +122,7 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            10
+            9
           ]
         }
       ],
@@ -130,7 +130,7 @@
         "Node name for S&R": "BerniniV2WanLoader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/wan_low/model.safetensors.index.json",
+        "Bernini-v2-balanced-int8/wan_low/model.safetensors.index.json",
         5.0,
         "bfloat16"
       ]
@@ -155,8 +155,8 @@
           "name": "VAE",
           "type": "VAE",
           "links": [
-            11,
-            19
+            10,
+            18
           ]
         }
       ],
@@ -193,7 +193,7 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            5
+            4
           ]
         }
       ],
@@ -230,7 +230,7 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            6
+            5
           ]
         }
       ],
@@ -261,7 +261,7 @@
           "name": "VIDEO",
           "type": "VIDEO",
           "links": [
-            3
+            6
           ]
         }
       ],
@@ -271,61 +271,6 @@
       "widgets_values": [
         "bernini_source.mp4"
       ]
-    },
-    {
-      "id": 10,
-      "type": "GetVideoComponents",
-      "pos": [
-        780,
-        660
-      ],
-      "size": [
-        340,
-        150
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "video",
-          "type": "VIDEO",
-          "link": 3
-        }
-      ],
-      "outputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "links": [
-            7
-          ]
-        },
-        {
-          "name": "audio",
-          "type": "AUDIO",
-          "links": null
-        },
-        {
-          "name": "fps",
-          "type": "FLOAT",
-          "links": null
-        },
-        {
-          "name": "bit_depth",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "color_space",
-          "type": "COMBO",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "GetVideoComponents"
-      },
-      "widgets_values": []
     },
     {
       "id": 11,
@@ -339,28 +284,28 @@
         720
       ],
       "flags": {},
-      "order": 9,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
           "name": "planner",
           "type": "BERNINI_V2_PLANNER",
-          "link": 4
+          "link": 3
         },
         {
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 5
+          "link": 4
         },
         {
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 6
+          "link": 5
         },
         {
-          "name": "source_video",
-          "type": "IMAGE",
-          "link": 7
+          "name": "video",
+          "type": "VIDEO",
+          "link": 6
         }
       ],
       "outputs": [
@@ -368,8 +313,8 @@
           "name": "plan",
           "type": "BERNINI_V2_PLAN",
           "links": [
-            8,
-            12
+            7,
+            11
           ]
         }
       ],
@@ -380,9 +325,9 @@
         "Restyle the source video as a cinematic winter scene while preserving its motion.",
         "vivid tones, overexposed, static, blurry details, subtitles, style, artwork, painting, image, motionless, overall grayish, worst quality, low quality, JPEG compression artifacts, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, malformed limbs, fused fingers, still frame, cluttered background, three legs, too many people in the background, walking backwards",
         "v2v",
-        848,
-        480,
-        81,
+        640,
+        368,
+        33,
         16.0,
         true,
         true,
@@ -406,28 +351,28 @@
         390
       ],
       "flags": {},
-      "order": 10,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
           "name": "plan",
           "type": "BERNINI_V2_PLAN",
-          "link": 8
+          "link": 7
         },
         {
           "name": "high_noise_model",
           "type": "MODEL",
-          "link": 9
+          "link": 8
         },
         {
           "name": "low_noise_model",
           "type": "MODEL",
-          "link": 10
+          "link": 9
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 11
+          "link": 10
         }
       ],
       "outputs": [
@@ -435,14 +380,14 @@
           "name": "guider",
           "type": "GUIDER",
           "links": [
-            14
+            13
           ]
         },
         {
           "name": "latent",
           "type": "LATENT",
           "links": [
-            17
+            16
           ]
         }
       ],
@@ -456,7 +401,9 @@
         1.2,
         0.75,
         true,
-        0.875
+        0.875,
+        "auto",
+        "auto"
       ]
     },
     {
@@ -471,13 +418,13 @@
         180
       ],
       "flags": {},
-      "order": 11,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
           "name": "plan",
           "type": "BERNINI_V2_PLAN",
-          "link": 12
+          "link": 11
         }
       ],
       "outputs": [
@@ -485,7 +432,7 @@
           "name": "SIGMAS",
           "type": "SIGMAS",
           "links": [
-            16
+            15
           ]
         }
       ],
@@ -510,7 +457,7 @@
         100
       ],
       "flags": {},
-      "order": 12,
+      "order": 11,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -518,7 +465,7 @@
           "name": "NOISE",
           "type": "NOISE",
           "links": [
-            13
+            12
           ]
         }
       ],
@@ -542,7 +489,7 @@
         70
       ],
       "flags": {},
-      "order": 13,
+      "order": 12,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -550,7 +497,7 @@
           "name": "SAMPLER",
           "type": "SAMPLER",
           "links": [
-            15
+            14
           ]
         }
       ],
@@ -571,33 +518,33 @@
         240
       ],
       "flags": {},
-      "order": 14,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
           "name": "noise",
           "type": "NOISE",
-          "link": 13
+          "link": 12
         },
         {
           "name": "guider",
           "type": "GUIDER",
-          "link": 14
+          "link": 13
         },
         {
           "name": "sampler",
           "type": "SAMPLER",
-          "link": 15
+          "link": 14
         },
         {
           "name": "sigmas",
           "type": "SIGMAS",
-          "link": 16
+          "link": 15
         },
         {
           "name": "latent_image",
           "type": "LATENT",
-          "link": 17
+          "link": 16
         }
       ],
       "outputs": [
@@ -605,7 +552,7 @@
           "name": "output",
           "type": "LATENT",
           "links": [
-            18
+            17
           ]
         },
         {
@@ -631,18 +578,18 @@
         90
       ],
       "flags": {},
-      "order": 15,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
           "name": "samples",
           "type": "LATENT",
-          "link": 18
+          "link": 17
         },
         {
           "name": "vae",
           "type": "VAE",
-          "link": 19
+          "link": 18
         }
       ],
       "outputs": [
@@ -650,7 +597,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            20
+            19
           ]
         }
       ],
@@ -671,13 +618,13 @@
         130
       ],
       "flags": {},
-      "order": 16,
+      "order": 15,
       "mode": 0,
       "inputs": [
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 20
+          "link": 19
         }
       ],
       "outputs": [
@@ -685,7 +632,7 @@
           "name": "VIDEO",
           "type": "VIDEO",
           "links": [
-            21
+            20
           ]
         }
       ],
@@ -709,13 +656,13 @@
         250
       ],
       "flags": {},
-      "order": 17,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
           "name": "video",
           "type": "VIDEO",
-          "link": 21
+          "link": 20
         }
       ],
       "outputs": [],
@@ -748,14 +695,6 @@
     ],
     [
       3,
-      9,
-      0,
-      10,
-      0,
-      "VIDEO"
-    ],
-    [
-      4,
       1,
       0,
       11,
@@ -763,7 +702,7 @@
       "BERNINI_V2_PLANNER"
     ],
     [
-      5,
+      4,
       3,
       0,
       11,
@@ -771,7 +710,7 @@
       "CONDITIONING"
     ],
     [
-      6,
+      5,
       4,
       0,
       11,
@@ -779,15 +718,15 @@
       "CONDITIONING"
     ],
     [
-      7,
-      10,
+      6,
+      9,
       0,
       11,
       3,
-      "IMAGE"
+      "VIDEO"
     ],
     [
-      8,
+      7,
       11,
       0,
       12,
@@ -795,7 +734,7 @@
       "BERNINI_V2_PLAN"
     ],
     [
-      9,
+      8,
       5,
       0,
       12,
@@ -803,7 +742,7 @@
       "MODEL"
     ],
     [
-      10,
+      9,
       6,
       0,
       12,
@@ -811,7 +750,7 @@
       "MODEL"
     ],
     [
-      11,
+      10,
       7,
       0,
       12,
@@ -819,7 +758,7 @@
       "VAE"
     ],
     [
-      12,
+      11,
       11,
       0,
       13,
@@ -827,7 +766,7 @@
       "BERNINI_V2_PLAN"
     ],
     [
-      13,
+      12,
       14,
       0,
       16,
@@ -835,7 +774,7 @@
       "NOISE"
     ],
     [
-      14,
+      13,
       12,
       0,
       16,
@@ -843,7 +782,7 @@
       "GUIDER"
     ],
     [
-      15,
+      14,
       15,
       0,
       16,
@@ -851,7 +790,7 @@
       "SAMPLER"
     ],
     [
-      16,
+      15,
       13,
       0,
       16,
@@ -859,7 +798,7 @@
       "SIGMAS"
     ],
     [
-      17,
+      16,
       12,
       1,
       16,
@@ -867,7 +806,7 @@
       "LATENT"
     ],
     [
-      18,
+      17,
       16,
       0,
       17,
@@ -875,7 +814,7 @@
       "LATENT"
     ],
     [
-      19,
+      18,
       7,
       0,
       17,
@@ -883,7 +822,7 @@
       "VAE"
     ],
     [
-      20,
+      19,
       17,
       0,
       18,
@@ -891,7 +830,7 @@
       "IMAGE"
     ],
     [
-      21,
+      20,
       18,
       0,
       19,
@@ -902,7 +841,7 @@
   "groups": [
     {
       "id": 1,
-      "title": "1. BF16 model loaders",
+      "title": "1. Native/quantized model loaders",
       "bounding": [
         -40,
         -80,
@@ -962,7 +901,7 @@
     "info": {
       "name": "Bernini v2 V2V",
       "author": "ComfyUI-BerniniV2",
-      "description": "Official task defaults, BF16 weights, and flow-prediction UniPC BH2."
+      "description": "Official task defaults, low-memory guidance, and flow-prediction UniPC BH2."
     }
   },
   "version": 0.4

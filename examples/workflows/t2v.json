@@ -32,7 +32,7 @@
         "Node name for S&R": "BerniniV2PlannerLoader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/repack-manifest.json",
+        "Bernini-v2-balanced-int8/repack-manifest.json",
         "bfloat16"
       ]
     },
@@ -65,7 +65,7 @@
         "Node name for S&R": "BerniniV2T5Loader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/repack-manifest.json",
+        "Bernini-v2-balanced-int8/repack-manifest.json",
         "bfloat16"
       ]
     },
@@ -97,7 +97,7 @@
         "Node name for S&R": "BerniniV2WanLoader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/wan_high/model.safetensors.index.json",
+        "Bernini-v2-balanced-int8/wan_high/model.safetensors.index.json",
         5.0,
         "bfloat16"
       ]
@@ -130,7 +130,7 @@
         "Node name for S&R": "BerniniV2WanLoader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/wan_low/model.safetensors.index.json",
+        "Bernini-v2-balanced-int8/wan_low/model.safetensors.index.json",
         5.0,
         "bfloat16"
       ]
@@ -289,9 +289,9 @@
         "A red fox walks through fresh snow at sunrise, cinematic camera movement.",
         "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
         "t2v",
-        848,
-        480,
-        81,
+        640,
+        368,
+        33,
         16.0,
         true,
         false,
@@ -365,7 +365,9 @@
         1.2,
         0.75,
         true,
-        0.875
+        0.875,
+        "auto",
+        "auto"
       ]
     },
     {
@@ -795,7 +797,7 @@
   "groups": [
     {
       "id": 1,
-      "title": "1. BF16 model loaders",
+      "title": "1. Native/quantized model loaders",
       "bounding": [
         -40,
         -80,
@@ -855,7 +857,7 @@
     "info": {
       "name": "Bernini v2 T2V",
       "author": "ComfyUI-BerniniV2",
-      "description": "Official task defaults, BF16 weights, and flow-prediction UniPC BH2."
+      "description": "Official task defaults, low-memory guidance, and flow-prediction UniPC BH2."
     }
   },
   "version": 0.4

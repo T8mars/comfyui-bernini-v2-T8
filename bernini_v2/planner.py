@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 
 import numpy as np
@@ -18,6 +19,8 @@ from .template import BerniniTemplate, build_conversation
 IMAGE_TASKS = {"t2i", "i2i"}
 VIDEO_TASKS = {"t2v", "v2v", "r2v", "rv2v"}
 SUPPORTED_TASKS = IMAGE_TASKS | VIDEO_TASKS
+MAX_VIT_TARGET_TOKENS = 4096
+MAX_BASE_LATENT_ELEMENTS = 128 * 1024 * 1024
 
 
 @dataclass
@@ -61,9 +64,44 @@ def validate_task_inputs(
         raise ValueError("i2i requires exactly one source image")
 
 
+def validate_generation_request(
+    task: str,
+    *,
+    width: int,
+    height: int,
+    length: int,
+    source_fps: float,
+    planning_steps: int,
+    vit_denoising_steps: int,
+) -> None:
+    """Reject unsupported shapes before loading any multi-gigabyte model."""
+
+    if width < 16 or height < 16 or width % 16 or height % 16:
+        raise ValueError(f"width and height must be positive multiples of 16, got {width}x{height}")
+    if task in VIDEO_TASKS and (length < 1 or (length - 1) % 4):
+        raise ValueError(f"video length must be 4n+1 frames, got {length}")
+    if task in IMAGE_TASKS and length < 1:
+        raise ValueError("image length must be positive")
+    if not math.isfinite(source_fps) or source_fps <= 0:
+        raise ValueError(f"source_fps must be finite and positive, got {source_fps}")
+    if planning_steps < 1 or vit_denoising_steps < 1:
+        raise ValueError("planning step counts must be positive")
+    target_length = 1 if task in IMAGE_TASKS else length
+    latent_elements = 16 * (((target_length - 1) // 4) + 1) * (height // 8) * (width // 8)
+    if latent_elements > MAX_BASE_LATENT_ELEMENTS:
+        gib = latent_elements * 2 / 2**30
+        raise ValueError(
+            f"requested latent alone is about {gib:.2f} GiB before model activations; reduce frames or resolution"
+        )
+
+
 def split_reference_images(reference_images: dict[str, torch.Tensor] | None) -> list[torch.Tensor]:
+    def order(name: str) -> tuple[str, int]:
+        match = re.match(r"^(.*?)(\d+)$", name)
+        return (match.group(1), int(match.group(2))) if match else (name, -1)
+
     output = []
-    for name in sorted(reference_images or {}):
+    for name in sorted(reference_images or {}, key=order):
         images = reference_images[name]
         if images is None:
             continue
@@ -117,7 +155,10 @@ def _encode_sources(
     packed_grids = torch.cat(grids).to(device=device)
     embeddings = runtime.vision_model(packed_patches, image_grid_thw=packed_grids)
     split_sizes = [int(grid.prod().item()) // 4 for grid in grids]
-    split_embeddings = list(torch.split(embeddings, split_sizes))
+    import comfy.model_management
+
+    intermediate = comfy.model_management.intermediate_device()
+    split_embeddings = [embedding.to(intermediate) for embedding in torch.split(embeddings, split_sizes)]
     video_embeddings = [embed for embed, kind in zip(split_embeddings, kinds, strict=True) if kind == "video"]
     image_embeddings = [embed for embed, kind in zip(split_embeddings, kinds, strict=True) if kind == "image"]
     video_grids = [grid[0].cpu() for grid, kind in zip(grids, kinds, strict=True) if kind == "video"]
@@ -252,18 +293,19 @@ def create_plan(
     seed: int = 42,
 ) -> BerniniV2Plan:
     validate_task_inputs(task, source_video, reference_images)
+    validate_generation_request(
+        task,
+        width=width,
+        height=height,
+        length=length,
+        source_fps=source_fps,
+        planning_steps=planning_steps,
+        vit_denoising_steps=vit_denoising_steps,
+    )
     output_is_image = task in IMAGE_TASKS
     target_length = 1 if output_is_image else length
-    video_embeds, image_embeds, video_grids, image_grids = _encode_sources(
-        runtime,
-        source_video=source_video,
-        reference_images=reference_images,
-        source_fps=source_fps,
-        max_frames=target_length,
-    )
     if output_is_image:
         target_grid = qwen_grid_for_media(1, height, width)[0]
-        image_grids.append(target_grid)
     else:
         target_vit_frames = len(
             planner_video_frame_indices(
@@ -274,6 +316,21 @@ def create_plan(
             )
         )
         target_grid = qwen_grid_for_media(target_vit_frames, height, width)[0]
+    target_token_count = _visual_token_count(target_grid)
+    if target_token_count > MAX_VIT_TARGET_TOKENS:
+        raise ValueError(
+            f"target requires {target_token_count} VIT tokens, but Bernini supports at most {MAX_VIT_TARGET_TOKENS}"
+        )
+    video_embeds, image_embeds, video_grids, image_grids = _encode_sources(
+        runtime,
+        source_video=source_video,
+        reference_images=reference_images,
+        source_fps=source_fps,
+        max_frames=target_length,
+    )
+    if output_is_image:
+        image_grids.append(target_grid)
+    else:
         video_grids.append(target_grid)
 
     image_counts = [_visual_token_count(grid) for grid in image_grids]
@@ -322,11 +379,11 @@ def create_plan(
     order = maskgit_order(target_count, seed, runtime.load_device)
     mask = torch.ones(target_count, device=runtime.load_device, dtype=torch.bool)
     for step in range(planning_steps):
-        hidden_states = [_hidden(runtime, branch) for branch in branches]
-        predicted = [
-            runtime.aux.connector.for_vit(hidden[:, branch["output_mask"], :])
-            for hidden, branch in zip(hidden_states, branches, strict=True)
-        ]
+        predicted = []
+        for branch in branches:
+            hidden = _hidden(runtime, branch)
+            predicted.append(runtime.aux.connector.for_vit(hidden[:, branch["output_mask"], :]))
+            del hidden
         ratio = math.cos(math.pi * 0.5 * (step + 1) / planning_steps)
         mask_length = max(1, min(int(mask.sum()) - 1, math.floor(target_count * ratio)))
         next_mask = torch.zeros_like(mask)
@@ -354,9 +411,11 @@ def create_plan(
 
     predicted_vit = cond["inputs"][:, cond["output_mask"], :]
     cond_hidden = _hidden(runtime, cond)
-    uncond_hidden = _hidden(runtime, uncond)
     cond_context = runtime.aux.connector.for_gen(cond_hidden)
+    del cond_hidden
+    uncond_hidden = _hidden(runtime, uncond)
     uncond_context = runtime.aux.connector.for_gen(uncond_hidden)
+    del uncond_hidden
     cond_text_mask = ~cond["output_mask"]
     uncond_text_mask = ~uncond["output_mask"]
     positive_t5 = _conditioning_tensor(positive, "positive").to(cond_context)

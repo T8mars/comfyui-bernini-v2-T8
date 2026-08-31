@@ -4,13 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bernini-v2-t8"
-version = "0.1.2"
+version = "0.2.0"
 description = "Native ComfyUI nodes for ByteDance Bernini-Diffusers-v2"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 dependencies = [
   "safetensors>=0.4.3",
+]
+classifiers = [
+  "Operating System :: OS Independent",
+  "Environment :: GPU :: NVIDIA CUDA",
 ]
 
 [project.urls]

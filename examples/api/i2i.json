@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "repack_manifest": "Bernini-v2-bf16/repack-manifest.json",
+      "repack_manifest": "Bernini-v2-balanced-int8/repack-manifest.json",
       "dtype": "bfloat16"
     },
     "class_type": "BerniniV2PlannerLoader",
@@ -11,7 +11,7 @@
   },
   "2": {
     "inputs": {
-      "repack_manifest": "Bernini-v2-bf16/repack-manifest.json",
+      "repack_manifest": "Bernini-v2-balanced-int8/repack-manifest.json",
       "dtype": "bfloat16"
     },
     "class_type": "BerniniV2T5Loader",
@@ -47,7 +47,7 @@
   },
   "5": {
     "inputs": {
-      "model_index": "Bernini-v2-bf16/wan_high/model.safetensors.index.json",
+      "model_index": "Bernini-v2-balanced-int8/wan_high/model.safetensors.index.json",
       "flow_shift": 5.0,
       "weight_dtype": "bfloat16"
     },
@@ -58,7 +58,7 @@
   },
   "6": {
     "inputs": {
-      "model_index": "Bernini-v2-bf16/wan_low/model.safetensors.index.json",
+      "model_index": "Bernini-v2-balanced-int8/wan_low/model.safetensors.index.json",
       "flow_shift": 5.0,
       "weight_dtype": "bfloat16"
     },
@@ -148,7 +148,9 @@
       "omega_target": 1.2,
       "omega_scale": 0.75,
       "use_task_defaults": true,
-      "boundary": 0.875
+      "boundary": 0.875,
+      "guidance_batch_size": "auto",
+      "vae_encode_mode": "auto"
     },
     "class_type": "BerniniV2RendererGuider",
     "_meta": {

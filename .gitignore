@@ -7,6 +7,9 @@ __pycache__/
 .ruff_cache/
 .publish-env/
 node.zip
+artifacts/metrics/
+artifacts/qa/int8_smoke_*
+artifacts/qa/*.framemd5
 *.py[cod]
 *.log
 *.pid

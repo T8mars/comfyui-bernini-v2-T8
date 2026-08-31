@@ -30,8 +30,9 @@ class BerniniV2PlanNode(io.ComfyNode):
                 io.Combo.Input("task", options=["t2i", "i2i", "t2v", "v2v", "r2v", "rv2v"], default="t2v"),
                 io.Int.Input("width", default=848, min=16, max=8192, step=16),
                 io.Int.Input("height", default=480, min=16, max=8192, step=16),
-                io.Int.Input("length", default=81, min=1, max=8192, step=4),
+                io.Int.Input("length", default=33, min=1, max=8192, step=4),
                 io.Image.Input("source_video", optional=True),
+                io.Video.Input("video", optional=True, advanced=True),
                 io.Autogrow.Input(
                     "reference_images",
                     optional=True,
@@ -68,6 +69,7 @@ class BerniniV2PlanNode(io.ComfyNode):
         height,
         length,
         source_video=None,
+        video=None,
         reference_images=None,
         source_fps=16.0,
         use_task_defaults=True,
@@ -79,6 +81,12 @@ class BerniniV2PlanNode(io.ComfyNode):
         vit_image_cfg=1.0,
         seed=42,
     ) -> io.NodeOutput:
+        if video is not None:
+            if source_video is not None:
+                raise ValueError("connect either source_video IMAGE batch or VIDEO, not both")
+            components = video.get_components()
+            source_video = components.images
+            source_fps = float(components.frame_rate)
         references = split_reference_images(reference_images)
         if use_task_defaults:
             preset = task_preset(task)

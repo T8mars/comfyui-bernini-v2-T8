@@ -8,13 +8,15 @@ released task presets for planning, renderer steps, guidance, and flow shift.
 Conditional-video cases use 33 frames at 16 fps (2.0625 seconds) as an explicit
 duration override. V2V and R2V use 848x480; the final RV2V rerun preserves its
 portrait aspect at 368x640 to follow the later long-edge-640 test budget. T2V
-was completed earlier at the released 848x480, 81-frame duration.
+was completed earlier at the released 848x480, 81-frame duration. A separate
+balanced-INT8 T2V acceptance uses the current 640x368, 33-frame test budget.
 
 | Task | Geometry / duration | Wall time | Visual acceptance | SHA-256 |
 |---|---|---:|---|---|
 | T2I | 512x512 PNG | 588.34 s | sharp, prompt-consistent fox in snow | `b246ea6a6249922d91a96e69a22db662a7f098b7175968adb58f746f6f1a5479` |
 | I2I | 512x512 PNG | 659.97 s | reference identity/composition preserved with requested change | `997d2359db10a8776e3b86d926b88c9e6c5c52ed8255872df22226555b29d0ce` |
 | T2V | 848x480, 81 frames, 5.0625 s | 4160.44 s | coherent fox walk with continuous motion | `b9b1446ac9c50516397646579b60ff696df7ecb178818945a084eadbf66c9571` |
+| T2V balanced INT8 | 640x368, 33 frames, 2.0625 s | 1651.98 s | sharp, coherent fox walk; no visible quantization collapse | `061c3380c7ace7f5d7c74f51fdbef45cfe89084c1523ae7baeb0dd131132442f` |
 | V2V | 848x480, 33 frames, 2.0625 s | 3769.25 s | official dog scene and motion preserved; stable snowman added | `853d5ad0cd8d2043184655bde551f6b6320a3c8b3b715c71e973c9a3829895f6` |
 | R2V | 848x480, 33 frames, 2.0625 s | 4080.58 s | all five official references integrated into one stable scene | `c98aafe34bf3ae78e71db9d84cdca2392af623cade9bbda7f4374dc51434a462` |
 | RV2V | 368x640, 33 frames, 2.0625 s | 7133.09 s | reference shirt applied; inner shirt, identity, scene, and motion preserved | `201fdfeb018b709374cad7aa2f601072036dc0721a84e10a8b5cb790437b2557` |
@@ -26,6 +28,7 @@ Quality artifacts and contact sheets remain local under `artifacts/quality` and
 Accepted video deliverables:
 
 - `artifacts/quality/bernini_v2_t2v_full_848x480_81f.mp4`
+- `artifacts/quality/bernini_v2_t2v_balanced_int8_long640_33f.mp4`
 - `artifacts/quality/bernini_v2_v2v_official_case1_848x480_33f.mp4`
 - `artifacts/quality/bernini_v2_r2v_official_5ref_848x480_33f.mp4`
 - `artifacts/quality/bernini_v2_rv2v_official_case1_long640_33f.mp4`
@@ -49,6 +52,32 @@ than a claim of pixel parity with the official pipeline.
 - Guidance: image 1.0, text 4.0, VIT target 0.5, post-switch scale 1.0
 - Precision: Qwen/planner, UMT5, both Wan experts, and VAE ran in BF16
 - Text conditioning: official T2I system prefix and standard Wan negative
+
+## Balanced-INT8 T2V acceptance
+
+The recommended 45.62 GiB package quantizes both Wan experts, Qwen, and UMT5
+with 1,300 stock-Comfy `int8_tensorwise` + ConvRot layers while retaining the
+connector, MaskGIT tokens, and VIT decoder in BF16. Per-layer reconstruction
+checks produced mean/min cosine 0.999954/0.999938 and mean/max relative error
+0.967%/1.116%, with zero quality fallbacks.
+
+The production run uses the versioned fox prompt and seed 42, 25 MaskGIT steps,
+5 VIT denoising steps, the T2V task guidance preset, and 40 flow-UniPC renderer
+steps. The fox remains recognizable and anatomically coherent across the clip,
+walks continuously up the snow slope, and keeps stable fur, ears, legs, and tail
+detail through the sunrise backlight. Camera/subject motion is continuous; no
+blocky quantization noise, gross color shift, frozen duplication, or temporal
+flicker is visible in the five-frame contact sheet and three full-resolution
+inspection frames. All 33 decoded frame MD5 values are unique.
+
+The container reports H.264, yuv420p, 640x368, 16 fps, 33 frames, and 2.0625
+seconds. Resource sampling across 810 polls recorded 16.511 GiB peak Comfy
+VRAM, 29.885 GiB peak process RSS, and 50.149 GiB peak process VMS/commit on the
+24 GB / 64 GB test host. Wall time was 1,651.984 seconds.
+
+This is a visual usability gate, not a pixelwise BF16 comparison: the accepted
+BF16 baseline used 848x480 and 81 frames, so its planned target and camera path
+differ. A same-geometry latent/prediction oracle remains a Core-readiness item.
 
 ## Cause of the unusable reduced T2I image
 
@@ -118,7 +147,7 @@ pixel equality with the released output.
   24 GB Windows OOM observed in the first full-resolution video attempt.
 - The combined RV2V VAE context is regression-tested in the released
   reference-image-then-source-video order.
-- The complete Python suite passes 76 tests. Ruff lint passes and all 57 Python
+- The complete Python suite passes 112 tests. Ruff lint passes and all 64 Python
   files pass `ruff format --check`.
 
 ## Remaining Core-readiness gates

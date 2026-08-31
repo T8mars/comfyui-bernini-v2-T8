@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-REPACK_ROOT = "Bernini-v2-bf16"
+REPACK_ROOT = "Bernini-v2-balanced-int8"
 MANIFEST = f"{REPACK_ROOT}/repack-manifest.json"
 HIGH_INDEX = f"{REPACK_ROOT}/wan_high/model.safetensors.index.json"
 LOW_INDEX = f"{REPACK_ROOT}/wan_low/model.safetensors.index.json"
@@ -98,9 +98,9 @@ def build_workflow(task: str) -> Graph:
         "prompt": prompt,
         "negative_prompt": negative,
         "task": task,
-        "width": 512 if is_image else 848,
-        "height": 512 if is_image else 480,
-        "length": 1 if is_image else 81,
+        "width": 512 if is_image else 640,
+        "height": 512 if is_image else 368,
+        "length": 1 if is_image else 33,
         "source_fps": 16.0,
         "use_task_defaults": True,
         "match_source_size": task in {"i2i", "v2v", "rv2v"},
@@ -119,9 +119,7 @@ def build_workflow(task: str) -> Graph:
         plan_inputs["reference_images.reference_image_0"] = ["8", 0]
     if task in {"v2v", "rv2v"}:
         graph["9"] = _node("LoadVideo", "Load Source Video", file="bernini_source.mp4")
-        graph["10"] = _node("GetVideoComponents", "Extract Source Frames", video=["9", 0])
-        plan_inputs["source_video"] = ["10", 0]
-        plan_inputs["source_fps"] = ["10", 2]
+        plan_inputs["video"] = ["9", 0]
 
     graph.update(
         {
@@ -140,6 +138,8 @@ def build_workflow(task: str) -> Graph:
                 omega_scale=0.75,
                 use_task_defaults=True,
                 boundary=0.875,
+                guidance_batch_size="auto",
+                vae_encode_mode="auto",
             ),
             "13": _node(
                 "BerniniV2Scheduler",
@@ -191,7 +191,7 @@ def validate_graph(task: str, graph: Graph) -> None:
                     raise ValueError(f"node {node_id}.{name} has invalid output slot {value[1]!r}")
 
     plan = graph["11"]["inputs"]
-    has_video = "source_video" in plan
+    has_video = "video" in plan or "source_video" in plan
     has_image = "reference_images.reference_image_0" in plan
     expected = {
         "t2i": (False, False),

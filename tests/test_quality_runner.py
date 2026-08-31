@@ -13,8 +13,8 @@ def test_quality_runner_preserves_official_defaults_and_overrides_media() -> Non
     graph = prepare_graph(
         "rv2v",
         width=640,
-        height=384,
-        length=81,
+        height=368,
+        length=33,
         reference_image=["reference.png", "reference-2.png", "reference-3.png"],
         source_video="source.mp4",
         output_prefix="video/Bernini-v2/quality/rv2v_acceptance",
@@ -25,8 +25,8 @@ def test_quality_runner_preserves_official_defaults_and_overrides_media() -> Non
     assert graph["12"]["inputs"]["use_task_defaults"] is True
     assert graph["13"]["inputs"]["use_task_defaults"] is True
     assert graph["11"]["inputs"]["width"] == 640
-    assert graph["11"]["inputs"]["height"] == 384
-    assert graph["11"]["inputs"]["length"] == 81
+    assert graph["11"]["inputs"]["height"] == 368
+    assert graph["11"]["inputs"]["length"] == 33
     assert graph["8"]["inputs"]["image"] == "reference.png"
     assert graph["20"]["inputs"]["image"] == "reference-2.png"
     assert graph["21"]["inputs"]["image"] == "reference-3.png"

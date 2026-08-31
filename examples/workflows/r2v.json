@@ -32,7 +32,7 @@
         "Node name for S&R": "BerniniV2PlannerLoader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/repack-manifest.json",
+        "Bernini-v2-balanced-int8/repack-manifest.json",
         "bfloat16"
       ]
     },
@@ -65,7 +65,7 @@
         "Node name for S&R": "BerniniV2T5Loader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/repack-manifest.json",
+        "Bernini-v2-balanced-int8/repack-manifest.json",
         "bfloat16"
       ]
     },
@@ -97,7 +97,7 @@
         "Node name for S&R": "BerniniV2WanLoader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/wan_high/model.safetensors.index.json",
+        "Bernini-v2-balanced-int8/wan_high/model.safetensors.index.json",
         5.0,
         "bfloat16"
       ]
@@ -130,7 +130,7 @@
         "Node name for S&R": "BerniniV2WanLoader"
       },
       "widgets_values": [
-        "Bernini-v2-bf16/wan_low/model.safetensors.index.json",
+        "Bernini-v2-balanced-int8/wan_low/model.safetensors.index.json",
         5.0,
         "bfloat16"
       ]
@@ -333,9 +333,9 @@
         "The referenced subject walks through fresh snow at sunrise, cinematic camera movement.",
         "vivid tones, overexposed, static, blurry details, subtitles, style, artwork, painting, image, motionless, overall grayish, worst quality, low quality, JPEG compression artifacts, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn face, deformed, disfigured, malformed limbs, fused fingers, still frame, cluttered background, three legs, too many people in the background, walking backwards",
         "r2v",
-        848,
-        480,
-        81,
+        640,
+        368,
+        33,
         16.0,
         true,
         false,
@@ -409,7 +409,9 @@
         1.2,
         0.75,
         true,
-        0.875
+        0.875,
+        "auto",
+        "auto"
       ]
     },
     {
@@ -847,7 +849,7 @@
   "groups": [
     {
       "id": 1,
-      "title": "1. BF16 model loaders",
+      "title": "1. Native/quantized model loaders",
       "bounding": [
         -40,
         -80,
@@ -907,7 +909,7 @@
     "info": {
       "name": "Bernini v2 R2V",
       "author": "ComfyUI-BerniniV2",
-      "description": "Official task defaults, BF16 weights, and flow-prediction UniPC BH2."
+      "description": "Official task defaults, low-memory guidance, and flow-prediction UniPC BH2."
     }
   },
   "version": 0.4

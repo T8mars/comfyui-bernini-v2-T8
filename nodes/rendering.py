@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from comfy_api.latest import ComfyExtension, io
 from typing_extensions import override
 
-from ..bernini_v2.guidance import compose_denoised_guidance, unipc_flow_sigmas
+from ..bernini_v2.guidance import compose_denoised_guidance, guidance_chunks, unipc_flow_sigmas
 from ..bernini_v2.media import fit_media_size, ordered_renderer_sources
 from ..bernini_v2.planner import BerniniV2Plan
 from ..bernini_v2.presets import task_preset
@@ -39,19 +39,24 @@ def _resize_source_media(image: torch.Tensor, max_size: int) -> torch.Tensor:
 def encode_renderer_sources(
     plan: BerniniV2Plan,
     vae,
+    *,
+    encode_mode: str = "auto",
 ) -> tuple[list[torch.Tensor], list[torch.Tensor], dict[str, torch.Tensor]]:
     """VAE encode source video and reference images as separate Wan streams."""
+    if encode_mode not in {"auto", "tiled"}:
+        raise ValueError(f"unsupported VAE encode mode: {encode_mode!r}")
+    encode = vae.encode_tiled if encode_mode == "tiled" else vae.encode
     video_latents = []
     if plan.source_video is not None:
         video = _resize_source_media(
             plan.source_video[: plan.length],
             plan.max_media_size,
         )
-        video_latents.append(vae.encode(video))
+        video_latents.append(encode(video))
 
     image_latents = []
     for image in plan.reference_images:
-        image_latents.append(vae.encode(_resize_source_media(image[:1], plan.max_media_size)))
+        image_latents.append(encode(_resize_source_media(image[:1], plan.max_media_size)))
 
     latent = torch.zeros(
         [1, 16, ((plan.length - 1) // 4) + 1, plan.height // 8, plan.width // 8],
@@ -82,6 +87,7 @@ class BerniniV2Guider(comfy.samplers.CFGGuider):
         omega_text: float,
         omega_target: float,
         scale: float,
+        guidance_batch_size: str | int = "auto",
     ):
         super().__init__(model_patcher)
         self.omega_video = omega_video
@@ -89,6 +95,7 @@ class BerniniV2Guider(comfy.samplers.CFGGuider):
         self.omega_text = omega_text
         self.omega_target = omega_target
         self.scale = scale
+        self.guidance_batch_size = guidance_batch_size
         self.rv2v = plan.task == "rv2v"
 
         # The released renderer appends reference-image VAE tokens before
@@ -112,15 +119,16 @@ class BerniniV2Guider(comfy.samplers.CFGGuider):
         self.inner_set_conds(conditions)
 
     def _predict_arms(self, inner_model, conditions, x, timestep, model_options, *, scale):
-        active_conditions = [conditions[name] for name in self.arm_names]
-        outputs = comfy.samplers.calc_cond_batch(
-            inner_model,
-            active_conditions,
-            x,
-            timestep,
-            model_options,
-        )
-        predictions = dict(zip(self.arm_names, outputs, strict=True))
+        predictions = {}
+        for chunk in guidance_chunks(self.arm_names, self.guidance_batch_size):
+            outputs = comfy.samplers.calc_cond_batch(
+                inner_model,
+                [conditions[name] for name in chunk],
+                x,
+                timestep,
+                model_options,
+            )
+            predictions.update(zip(chunk, outputs, strict=True))
         return compose_denoised_guidance(
             predictions,
             x,
@@ -304,6 +312,18 @@ class BerniniV2RendererGuider(io.ComfyNode):
                 io.Float.Input("omega_scale", default=0.75, min=0.0, max=2.0, step=0.05),
                 io.Boolean.Input("use_task_defaults", default=True, advanced=True),
                 io.Float.Input("boundary", default=0.875, min=0.0, max=1.0, step=0.001, advanced=True),
+                io.Combo.Input(
+                    "guidance_batch_size",
+                    options=["auto", "1", "2", "all"],
+                    default="auto",
+                    advanced=True,
+                ),
+                io.Combo.Input(
+                    "vae_encode_mode",
+                    options=["auto", "tiled"],
+                    default="auto",
+                    advanced=True,
+                ),
             ],
             outputs=[
                 io.Guider.Output(display_name="guider"),
@@ -325,8 +345,10 @@ class BerniniV2RendererGuider(io.ComfyNode):
         omega_scale,
         use_task_defaults=True,
         boundary=0.875,
+        guidance_batch_size="auto",
+        vae_encode_mode="auto",
     ) -> io.NodeOutput:
-        video_latents, image_latents, latent = encode_renderer_sources(plan, vae)
+        video_latents, image_latents, latent = encode_renderer_sources(plan, vae, encode_mode=vae_encode_mode)
         if use_task_defaults:
             preset = task_preset(plan.task)
             omega_video = preset["omega_video"]
@@ -342,6 +364,7 @@ class BerniniV2RendererGuider(io.ComfyNode):
             "omega_image": omega_image,
             "omega_text": omega_text,
             "omega_target": omega_target,
+            "guidance_batch_size": guidance_batch_size,
         }
         guider = BerniniV2DualExpertGuider(
             high_noise_model,

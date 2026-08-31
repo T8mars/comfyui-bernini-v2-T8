@@ -9,6 +9,25 @@ from collections.abc import Mapping
 import torch
 
 
+def guidance_chunks(names: list[str], batch_size: str | int) -> list[list[str]]:
+    """Split condition arms without changing their evaluation or composition order."""
+
+    if batch_size == "all":
+        size = len(names)
+    elif batch_size == "auto":
+        # Video arms have very large activations. One arm at a time is the safe
+        # default; users can explicitly trade memory for throughput.
+        size = 1
+    else:
+        try:
+            size = int(batch_size)
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"invalid guidance batch size: {batch_size!r}") from error
+    if size < 1:
+        raise ValueError("guidance batch size must be at least 1")
+    return [names[index : index + size] for index in range(0, len(names), size)]
+
+
 def unipc_flow_sigmas(steps: int, shift: float) -> torch.Tensor:
     """Return the released Diffusers UniPC flow schedule without importing Diffusers."""
     raw = torch.linspace(0.999, 0.0, steps + 1, dtype=torch.float32)[:-1]

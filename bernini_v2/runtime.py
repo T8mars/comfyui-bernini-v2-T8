@@ -14,7 +14,7 @@ import torch.nn as nn
 
 from .planner_model import DiffLossFM, MLPConnector
 from .qwen import install_qwen_vision_dtype_compat
-from .sharded import load_sharded_state_dict
+from .sharded import component_checkpoint, load_checkpoint_state_dict
 
 
 class PlannerAux(nn.Module):
@@ -93,11 +93,23 @@ def _load_assign(module: nn.Module, state_dict: dict[str, torch.Tensor], label: 
         )
 
 
-def _component_index(root: Path, component: str) -> Path:
-    path = root / component / "model.safetensors.index.json"
-    if not path.is_file():
-        raise FileNotFoundError(path)
-    return path
+def _component_state(root: Path, component: str) -> dict[str, torch.Tensor]:
+    state_dict = load_checkpoint_state_dict(component_checkpoint(root, component))
+    if "scaled_fp8" in state_dict:
+        import comfy.utils
+
+        state_dict, _ = comfy.utils.convert_old_quants(state_dict)
+    return state_dict
+
+
+def _uses_native_quant(state_dict: dict[str, torch.Tensor]) -> bool:
+    return any(key.endswith(".comfy_quant") for key in state_dict)
+
+
+def _module_init_device(state_dict: dict[str, torch.Tensor], offload_device: torch.device) -> torch.device | str:
+    """Quant hooks must materialize on storage, while assign-loading BF16 can start on meta."""
+
+    return offload_device if _uses_native_quant(state_dict) else "meta"
 
 
 def _qwen_config(config_path: Path) -> dict[str, object]:
@@ -133,8 +145,13 @@ def load_planner_runtime(root: str | Path, *, dtype: torch.dtype = torch.bfloat1
         raise ValueError(
             f"checkpoint mRoPE sections {rope_dims} do not match ComfyUI Qwen config {config_obj.rope_dims}"
         )
-    operations = comfy.ops.manual_cast
-    language_model = Llama2_(config_obj, device="meta", dtype=dtype, ops=operations)
+    load_device = comfy.model_management.get_torch_device()
+    offload_device = comfy.model_management.text_encoder_offload_device()
+    mllm_state = _component_state(root, "mllm")
+    mllm_quantized = _uses_native_quant(mllm_state)
+    operations = comfy.ops.mixed_precision_ops({}, dtype) if mllm_quantized else comfy.ops.manual_cast
+    init_device = _module_init_device(mllm_state, offload_device)
+    language_model = Llama2_(config_obj, device=init_device, dtype=dtype, ops=operations)
     vision_model = Qwen2VLVisionTransformer(
         hidden_size=1280,
         output_hidden_size=config_obj.hidden_size,
@@ -145,14 +162,11 @@ def load_planner_runtime(root: str | Path, *, dtype: torch.dtype = torch.bfloat1
         temporal_patch_size=2,
         spatial_merge_size=2,
         window_size=112,
-        device="meta",
+        device=init_device,
         dtype=dtype,
         ops=operations,
     )
     install_qwen_vision_dtype_compat(vision_model)
-    aux = PlannerAux(device="meta", dtype=dtype, operations=operations)
-
-    mllm_state = load_sharded_state_dict(_component_index(root, "mllm"))
     language_state = {
         key.removeprefix("model."): value for key, value in mllm_state.items() if key.startswith("model.")
     }
@@ -161,17 +175,21 @@ def load_planner_runtime(root: str | Path, *, dtype: torch.dtype = torch.bfloat1
     }
     _load_assign(language_model, language_state, "Qwen language model")
     _load_assign(vision_model, vision_state, "Qwen vision model")
+    del language_state, vision_state, mllm_state
 
     aux_state = {}
-    connector_state = load_sharded_state_dict(_component_index(root, "connector"))
+    connector_state = _component_state(root, "connector")
     aux_state.update({f"connector.{key}": value for key, value in connector_state.items()})
-    decoder_state = load_sharded_state_dict(_component_index(root, "vit_decoder"))
+    decoder_state = _component_state(root, "vit_decoder")
     aux_state.update({f"vit_decoder.{key}": value for key, value in decoder_state.items()})
-    aux_state.update(load_sharded_state_dict(_component_index(root, "mask_tokens")))
+    aux_state.update(_component_state(root, "mask_tokens"))
+    aux_quantized = _uses_native_quant(aux_state)
+    aux_operations = comfy.ops.mixed_precision_ops({}, dtype) if aux_quantized else comfy.ops.manual_cast
+    aux_init_device = _module_init_device(aux_state, offload_device)
+    aux = PlannerAux(device=aux_init_device, dtype=dtype, operations=aux_operations)
     _load_assign(aux, aux_state, "Bernini planner auxiliary")
+    del connector_state, decoder_state, aux_state
 
-    load_device = comfy.model_management.get_torch_device()
-    offload_device = comfy.model_management.text_encoder_offload_device()
     language_patcher = CoreModelPatcher(language_model, load_device=load_device, offload_device=offload_device)
     vision_patcher = CoreModelPatcher(vision_model, load_device=load_device, offload_device=offload_device)
     aux_patcher = CoreModelPatcher(aux, load_device=load_device, offload_device=offload_device)
@@ -195,7 +213,7 @@ def load_wan_t5(root: str | Path, *, dtype: torch.dtype = torch.bfloat16):
     import comfy.sd
 
     root = Path(root).resolve()
-    state_dict = load_sharded_state_dict(_component_index(root, "t5_text_encoder"))
+    state_dict = _component_state(root, "t5_text_encoder")
     tokenizer_path = root / "t5_tokenizer" / "spiece.model"
     if not tokenizer_path.is_file():
         raise FileNotFoundError(tokenizer_path)

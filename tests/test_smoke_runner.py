@@ -30,3 +30,9 @@ def test_prepare_graph_sets_media_and_output_names():
     assert graph["8"]["inputs"]["image"] == "subject.png"
     assert graph["9"]["inputs"]["file"] == "source.mp4"
     assert graph["19"]["inputs"]["filename_prefix"] == "checks/rv2v"
+
+
+def test_prepare_graph_can_switch_weight_package():
+    graph = MODULE.prepare_graph("t2v", repack_root="Bernini-v2-bf16-native")
+    assert graph["1"]["inputs"]["repack_manifest"] == "Bernini-v2-bf16-native/repack-manifest.json"
+    assert graph["5"]["inputs"]["model_index"].startswith("Bernini-v2-bf16-native/")

@@ -21,6 +21,8 @@ loading, device management, conditioning, guider, scheduler and sampling APIs.
   six tasks pass cold-process, real-weight end-to-end smoke tests through the
   Comfy `/prompt` API. Production-setting visual baselines pass for T2I, I2I,
   T2V, official-case V2V, five-reference R2V, and official-case RV2V.
+  The balanced INT8 package also passes a production-step 640x368, 33-frame
+  T2V visual gate and two consecutive uncached jobs in one server process.
   Intermediate-tensor parity gates remain before proposing a Core PR.
 
 ## Intended runtime components
@@ -50,8 +52,8 @@ Restart ComfyUI after installation. The Registry/Manager package ID is
 
 The model is not bundled with this node pack. Follow [Model preparation](#model-preparation)
 before loading an example workflow. The pinned upstream checkpoint is roughly
-180 GB, and the native repack is roughly 166 GiB, so verify disk, RAM, and VRAM
-capacity first.
+180 GB. The corrected native BF16 repack is 83.03 GiB; the recommended
+balanced INT8 ConvRot package is 45.62 GiB (45.1% smaller).
 
 ## Development
 
@@ -84,15 +86,46 @@ Repack it into independently loadable native components under ComfyUI:
 ```powershell
 python tools/repack_diffusers.py `
   --source models/ByteDance/Bernini-Diffusers-v2 `
-  --output C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-bf16
+  --output C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-bf16-native `
+  --storage-dtype bfloat16 `
+  --source-revision 399cf6a18a4c523b367b2b1ac25a2a61009e7df3
 
 python tools/validate_repack.py `
-  --root C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-bf16
+  --root C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-bf16-native `
+  --verify-hashes
 ```
 
 The validator checks every index entry, shard key set, dtype/shape-derived byte
-count, and manifest component total without loading the full checkpoint into
-RAM. Add `--verify-hashes` for a slow full-file SHA-256 pass.
+count, actual storage dtype, quantization marker/scale contract, manifest totals,
+and optional SHA-256 hashes without loading the full checkpoint into RAM. Writes
+are atomic and resumable; rerunning the same command resumes verified shards.
+
+Create the recommended stock-Comfy INT8 ConvRot package from the BF16 repack:
+
+```powershell
+python tools/quantize_repack.py `
+  --source C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-bf16-native `
+  --output C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-balanced-int8 `
+  --profile balanced --device cuda
+
+python tools/validate_repack.py `
+  --root C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-balanced-int8 `
+  --verify-hashes
+
+python tools/validate_renderer_pair.py `
+  --high C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-balanced-int8/wan_high/model.safetensors.index.json `
+  --low C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-balanced-int8/wan_low/model.safetensors.index.json
+```
+
+`balanced` quantizes the two Wan experts, Qwen planner, and T5 while retaining
+the quality-sensitive planner auxiliary path in BF16. The validated package is
+45.62 GiB, 45.1% smaller than the 83.03 GiB BF16 source. Every candidate layer
+is reconstructed during conversion; layers below cosine `0.99` or above `2%`
+relative error automatically remain BF16. The pair validator checks the 40
+renderer blocks, quantization markers, and high/low structural match without
+materializing the large tensors. See
+[`docs/LOW_MEMORY_WEIGHTS.md`](docs/LOW_MEMORY_WEIGHTS.md) for profiles, CUDA
+requirements, NVFP4, and optional GGUF wiring.
 
 Bernini uses the standard Wan 2.1 VAE. Download it directly into ComfyUI's VAE
 folder:
@@ -147,9 +180,10 @@ python tools/run_comfy_smoke.py rv2v `
   --source-video bernini_source.mp4
 ```
 
-The runner never changes the versioned workflow; it applies 256 px, 1+1 planner
-steps, and two renderer steps in memory, submits `/prompt`, and waits for the
-corresponding history entry.
+The runner never changes the versioned workflow. It uses the 640x368,
+33-frame (2.0625-second) video budget by default, applies one MaskGIT step, one
+VIT denoising step, and two renderer steps in memory, submits `/prompt`, and
+waits for the corresponding history entry. Image tasks use one frame.
 
 Queue a production-setting quality case with an explicit prompt and, for R2V
 or RV2V, repeat `--reference-image` for every reference:
@@ -163,10 +197,9 @@ python tools/run_comfy_quality.py r2v `
 ```
 
 At 16 fps, Bernini-compatible frame counts follow `4n+1`; 33 frames produce a
-2.0625-second regression clip. Subsequent resource-bounded video quality tests
-preserve source aspect ratio and cap the long edge at 640. The versioned
-workflows keep the released 81-frame defaults and are not silently changed by
-these test overrides.
+2.0625-second regression clip. Versioned video workflows now use 640x368 and 33
+frames. Portrait/source-matched cases preserve aspect ratio and cap the long
+edge at 640 rather than forcing square output.
 
 The files can be submitted directly to ComfyUI's `/prompt` API. ComfyUI also
 supports loading an API-format workflow for inspection; replace the placeholder
@@ -180,17 +213,16 @@ The six real-weight smoke tests were run on Windows with ComfyUI `0.33.0`
 PyTorch build falls back to the legacy `ModelPatcher`; current Comfy/PyTorch is
 preferred for normal use.
 
-The released checkpoint is unusually large: the repack is about 166 GiB and a
-full graph constructs UMT5-XXL, Qwen2.5-VL, the VIT decoder, and two Wan 14B
-experts. On the verified 64 GB Windows host, full-resolution video validation
-uses `--lowvram --reserve-vram 3 --disable-smart-memory --preview-method none
---cache-none` and restarts between cold cases. The renderer estimates activation
-memory at the high/low expert switch and passes that reservation to Comfy model
-management; without it, the first 848x480 run exhausted a 24 GB device while
-loading the low-noise expert. Reusing the same process after a complete
-generation can still exhaust host memory while the next loader graph is being
-constructed. This lifecycle behavior remains a Core-readiness issue, not a
-model-parity result.
+The original package called `Bernini-v2-bf16` was discovered to contain FP32
+storage and occupied about 166 GiB. Do not use it as the memory baseline. The
+repacker now performs and validates a real BF16 conversion. For 24 GB devices,
+leave `guidance_batch_size=auto` so renderer arms execute sequentially, and use
+the explicit tiled VAE mode if regular encode repeatedly approaches the limit.
+The high/low expert switch still reserves activation memory through Comfy model
+management. Two consecutive balanced-INT8 jobs now pass in the same server
+process with memory returning to baseline. The production 640x368/33-frame T2V
+run peaked at 16.511 GiB Comfy-visible VRAM and 29.885 GiB process RSS; details
+are tracked in the smoke, quality, and low-memory records.
 
 Exact smoke settings, output hashes, and remaining limitations are recorded in
 [`docs/SMOKE_TESTS.md`](docs/SMOKE_TESTS.md).

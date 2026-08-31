@@ -1,5 +1,32 @@
 # Real-weight smoke-test record
 
+## Balanced-INT8 repeat lifecycle acceptance
+
+The new low-memory path passed two identical jobs consecutively in one ComfyUI
+server process without restarting or reusing cached node outputs:
+
+| Run | Geometry / duration | Planner / renderer steps | Wall time | SHA-256 |
+|---|---|---:|---:|---|
+| 1 | 640x368, 33 frames, 2.0625 s | 1 MaskGIT + 1 VIT / 2 | 343.68 s | `f8763a4f932640043fdf4db9f16d27dda9d3dd8358fadf8529411f389a822d0d` |
+| 2 | 640x368, 33 frames, 2.0625 s | 1 MaskGIT + 1 VIT / 2 | 227.51 s | `4dd9f6d1327a5d419ce0460b147412b66e1b150d4e391064a02e369ef7a1529d` |
+
+The MP4 container hashes differ because the embedded workflow/output prefix
+differs. Independent `framemd5` checks are identical for all 33 decoded frames.
+Both files report H.264, 640x368, 16 fps, and 2.0625 seconds through `ffprobe`.
+
+This used the 45.62 GiB balanced package with 1,300 stock-Comfy
+`int8_tensorwise` + ConvRot layers, BF16 compute, sequential guidance arms, and
+the same running server. Observed peak use was about 22.3 GiB VRAM while at
+least 33 GiB of 64 GB host RAM remained free. After run 2, ComfyUI returned to
+about 1.47 GiB VRAM, 2.68 GiB physical process memory, and 5.28 GiB process
+private commit; host free RAM recovered to about 47 GiB. This closes the
+previous repeat-job crash for the supported low-memory package on the tested
+compatibility environment.
+
+These 1/1/2-step videos are intentionally blurred execution smokes. They are
+not accepted visual-quality evidence; the balanced-INT8 production-step result
+is recorded separately in `QUALITY_TESTS.md`.
+
 ## Scope
 
 This record proves that every released Bernini v2 task can execute through
@@ -7,10 +34,14 @@ native Comfy model loading, planning, guidance, sampling, VAE decode, and Core
 save nodes. It is intentionally a low-cost execution smoke, not a visual-quality
 or numerical-parity claim.
 
-The source checkpoint was pinned to Hugging Face revision
+The original historical smoke used a preserve-dtype package pinned to Hugging
+Face revision
 `399cf6a18a4c523b367b2b1ac25a2a61009e7df3`. The repack validator checked all
 seven component indexes, 62 shards, 3314 runtime tensors, and 166.08 GiB of
-indexed tensor data. Both Wan experts map exactly to 1095 native Comfy keys.
+indexed tensor data. That directory was later proved to contain FP32 storage,
+not BF16, and is superseded by the 83.03 GiB true-BF16 and 45.62 GiB balanced
+INT8 packages. Both Wan experts still map exactly to 1095 native Comfy keys
+before quantization side tensors are added.
 
 ## Environment
 
@@ -20,9 +51,10 @@ indexed tensor data. Both Wan experts map exactly to 1095 native Comfy keys.
 - Server flags: `--lowvram --cache-none --preview-method none`
 - Only this custom node package was whitelisted during validation
 
-Every case used a clean Comfy process because the verified legacy
-`ModelPatcher` environment did not reliably reclaim enough host memory to build
-a second full loader graph.
+Every historical six-task case used a clean Comfy process because the FP32
+package did not reliably reclaim enough host memory to build a second full
+loader graph. The balanced-INT8 lifecycle acceptance above deliberately uses
+two fresh loader graphs in one process with `--cache-none`.
 
 ## Settings and results
 
@@ -42,10 +74,11 @@ The video files were independently read with `ffprobe`; each reports H.264,
 256×256, 16/1 fps, duration 0.3125 seconds, and exactly five decoded frames.
 Generated media is local evidence and is not committed to the repository.
 
-The request setup is reproducible with `tools/run_comfy_smoke.py`; run one task
-per clean Comfy process in this legacy-PyTorch environment. The script derives
-its graph from the versioned `examples/api/<task>.json` file and does not modify
-the example.
+The historical 256x256/5-frame request setup remains reproducible with explicit
+`tools/run_comfy_smoke.py --width 256 --height 256 --length 5` overrides. The
+runner now defaults to 640x368/33 frames and can run consecutive balanced-INT8
+jobs in the same legacy-PyTorch server. It derives its graph from the versioned
+`examples/api/<task>.json` file and does not modify the example on disk.
 
 ## Bugs found by real execution
 
@@ -55,10 +88,12 @@ the example.
 2. ComfyUI 0.33.0's Qwen vision RoPE leaves Q/K in FP32 while V remains BF16.
    The plugin applies ByteDance's FP32-then-cast-back behavior to its own vision
    tower instance, with dtype and numerical regression tests.
-3. Reusing the first completed process to construct a second full graph caused
-   a native Windows access violation while allocating T5 layers. Clean-process
-   runs with `--cache-none` pass; repeated-prompt memory reclamation remains an
-   explicit Core-readiness gate.
+3. Reusing the first completed **FP32-storage** graph to construct a second full
+   graph caused a native Windows access violation while allocating T5 layers.
+   True BF16 fixed the mislabeled storage baseline; the balanced-INT8 package,
+   sequential branches, and low-memory guidance now pass two uncached jobs in
+   one process. Current-CUDA and Linux lifecycle lanes remain Core-readiness
+   gates.
 4. The smoke workflows originally reused Comfy's generic VP UniPC sampler and
    allowed automatic FP16 selection. The production examples now use the
    Diffusers-compatible Bernini flow UniPC sampler and explicit BF16. Existing
@@ -73,5 +108,6 @@ the example.
 - Planner hidden-state, VIT target, Wan prediction, and UniPC step tensors
   against the official Diffusers implementation within agreed tolerances
 - Repeated long-video regression beyond the completed 81-frame T2V baseline
-- Repeated prompts in one process on the current supported PyTorch/CUDA stack
+- Repeated prompts in one process on a current PyTorch/CUDA 13 stack; the
+  PyTorch 2.7/CUDA 12.8 compatibility lane now passes
 - Interrupted download/repack recovery and Linux execution

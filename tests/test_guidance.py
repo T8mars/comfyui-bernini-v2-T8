@@ -4,7 +4,15 @@ from bernini_v2.guidance import (
     apg_delta,
     compose_denoised_guidance,
     compose_velocity_guidance,
+    guidance_chunks,
 )
+
+
+def test_guidance_chunks_default_to_low_memory_ordered_arms():
+    names = ["base", "source", "text", "target"]
+    assert guidance_chunks(names, "auto") == [["base"], ["source"], ["text"], ["target"]]
+    assert guidance_chunks(names, "2") == [["base", "source"], ["text", "target"]]
+    assert guidance_chunks(names, "all") == [names]
 
 
 def test_apg_parallel_and_orthogonal_components():

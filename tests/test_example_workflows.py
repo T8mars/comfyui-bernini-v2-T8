@@ -24,6 +24,14 @@ def test_video_save_uses_v3_dynamic_combo_paths():
     assert inputs["format.codec"] == "h264"
 
 
+def test_video_examples_use_two_second_long_edge_640_and_low_memory_guidance():
+    graph = build_workflow("t2v")
+    assert graph["11"]["inputs"]["width"] == 640
+    assert graph["11"]["inputs"]["height"] == 368
+    assert graph["11"]["inputs"]["length"] == 33
+    assert graph["12"]["inputs"]["guidance_batch_size"] == "auto"
+
+
 def test_t2i_uses_official_text_conditions_bf16_and_flow_solver():
     graph = build_workflow("t2i")
     assert graph["3"]["inputs"]["text"] == SYSTEM_PROMPT["t2i"] + DEFAULT_PROMPT["t2i"]

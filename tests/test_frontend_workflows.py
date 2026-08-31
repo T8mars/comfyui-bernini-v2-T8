@@ -31,6 +31,13 @@ def test_t2i_frontend_uses_quality_defaults():
     assert nodes[15]["type"] == "BerniniV2UniPCSampler"
 
 
+def test_video_frontend_uses_two_second_long_edge_640_and_low_memory_guidance():
+    workflow = build_frontend_workflow("t2v")
+    nodes = {node["id"]: node for node in workflow["nodes"]}
+    assert nodes[11]["widgets_values"][2:6] == ["t2v", 640, 368, 33]
+    assert nodes[12]["widgets_values"][-2:] == ["auto", "auto"]
+
+
 def test_writes_all_six_frontend_workflows(tmp_path):
     write_frontend_workflows(tmp_path)
     paths = sorted(tmp_path.glob("*.json"))

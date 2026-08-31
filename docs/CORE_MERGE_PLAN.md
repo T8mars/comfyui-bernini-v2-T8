@@ -50,8 +50,10 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
 - Cold-process low-VRAM/offload execution passes on a 24 GB GPU / 64 GB host.
   Full-resolution video needs an activation-memory estimate at expert switch
   plus `--reserve-vram 3 --disable-smart-memory` on the verified legacy
-  PyTorch 2.7 stack. Multi-prompt model lifecycle, interrupted download, and
-  interrupted repack paths still need dedicated tests.
+  PyTorch 2.7 stack. The balanced-INT8 path now passes two uncached
+  640x368/33-frame jobs in one process and returns host and device memory to
+  baseline. Repeat BF16, current-CUDA/Linux lifecycle, interrupted download,
+  and interrupted repack paths still need dedicated tests.
 - Code is rebased onto current ComfyUI and split into reviewable commits.
 
 ## Known upstream-facing compatibility items
@@ -62,15 +64,21 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
   the shared Qwen vision implementation and delete the bridge.
 - PyTorch 2.7 on the verified Windows host uses Comfy's legacy ModelPatcher.
   Repeat lifecycle and memory tests on the current supported PyTorch/CUDA stack.
-- A completed 166 GiB checkpoint graph can leave enough host-side state alive that a
-  second fresh loader graph exhausts a 64 GB process. Core submission needs a
-  deliberate cache/offload policy and a repeated-prompt test.
+  The compatibility lane now has balanced-INT8 repeat evidence plus a
+  production-step T2V quality pass, but that does not replace the upstream lane.
+- The original `Bernini-v2-bf16` directory was actually FP32 and occupied about
+  166 GiB. It is not a valid BF16 memory baseline. The corrected BF16 package is
+  83.03 GiB, and the architecture-aware balanced INT8 ConvRot package is
+  45.62 GiB. Core submission still needs repeat-prompt lifecycle evidence for
+  both packages on current ComfyUI.
 - Combined RV2V VAE streams must remain in reference-image-then-source-video
   order. Wan source ids and RoPE depend on stream position; reversing them
   passed execution smoke but failed the official garment-edit semantics.
-- The public Core examples should retain the released 81-frame defaults. The
-  33-frame quality fixtures are a deliberate two-second test budget and must
-  not silently redefine task presets.
+- The future public Core examples should retain the released 81-frame presets.
+  This custom-node package deliberately defaults video examples and regression
+  runners to 33 frames (2.0625 seconds) with a 640-pixel long edge so 24 GB / 64
+  GB development hosts can exercise the complete path. The distinction must be
+  called out when preparing an upstream diff.
 
 No PR, issue comment, or upstream notification should be made until these gates
 are complete and the owner explicitly approves submission.

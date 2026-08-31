@@ -123,7 +123,7 @@ class FrontendGraph:
             "groups": [
                 {
                     "id": 1,
-                    "title": "1. BF16 model loaders",
+                    "title": "1. Native/quantized model loaders",
                     "bounding": [-40, -80, 430, 850],
                     "color": "#3f789e",
                     "flags": {},
@@ -157,7 +157,7 @@ class FrontendGraph:
                 "info": {
                     "name": f"Bernini v2 {self.task.upper()}",
                     "author": "ComfyUI-BerniniV2",
-                    "description": "Official task defaults, BF16 weights, and flow-prediction UniPC BH2.",
+                    "description": "Official task defaults, low-memory guidance, and flow-prediction UniPC BH2.",
                 },
             },
             "version": 0.4,
@@ -198,14 +198,6 @@ def build_frontend_workflow(task: str) -> dict[str, Any]:
         )
     if task in {"v2v", "rv2v"}:
         graph.add(9, "LoadVideo", (780, 500), (340, 120), ["bernini_source.mp4"], [("VIDEO", "VIDEO")])
-        graph.add(
-            10,
-            "GetVideoComponents",
-            (780, 660),
-            (340, 150),
-            [],
-            [("images", "IMAGE"), ("audio", "AUDIO"), ("fps", "FLOAT"), ("bit_depth", "INT"), ("color_space", "COMBO")],
-        )
 
     graph.add(
         11,
@@ -216,9 +208,9 @@ def build_frontend_workflow(task: str) -> dict[str, Any]:
             prompt,
             negative,
             task,
-            512 if image_task else 848,
-            512 if image_task else 480,
-            1 if image_task else 81,
+            512 if image_task else 640,
+            512 if image_task else 368,
+            1 if image_task else 33,
             16.0,
             True,
             task in {"i2i", "v2v", "rv2v"},
@@ -236,7 +228,7 @@ def build_frontend_workflow(task: str) -> dict[str, Any]:
         "BerniniV2RendererGuider",
         (1430, 0),
         (360, 390),
-        [1.25, 3.0, 4.0, 1.2, 0.75, True, 0.875],
+        [1.25, 3.0, 4.0, 1.2, 0.75, True, 0.875, "auto", "auto"],
         [("guider", "GUIDER"), ("latent", "LATENT")],
     )
     graph.add(13, "BerniniV2Scheduler", (1430, 430), (360, 180), [40, 5.0, True], [("SIGMAS", "SIGMAS")])
@@ -254,13 +246,11 @@ def build_frontend_workflow(task: str) -> dict[str, Any]:
 
     graph.connect(2, 0, 3, "clip", "CLIP")
     graph.connect(2, 0, 4, "clip", "CLIP")
-    if task in {"v2v", "rv2v"}:
-        graph.connect(9, 0, 10, "video", "VIDEO")
     graph.connect(1, 0, 11, "planner", "BERNINI_V2_PLANNER")
     graph.connect(3, 0, 11, "positive", "CONDITIONING")
     graph.connect(4, 0, 11, "negative", "CONDITIONING")
     if task in {"v2v", "rv2v"}:
-        graph.connect(10, 0, 11, "source_video", "IMAGE")
+        graph.connect(9, 0, 11, "video", "VIDEO")
     if task in {"i2i", "r2v", "rv2v"}:
         graph.connect(
             8,
@@ -308,9 +298,9 @@ def validate_frontend_workflow(task: str, workflow: dict[str, Any]) -> None:
         "t2i": set(),
         "i2i": {"LoadImage"},
         "t2v": set(),
-        "v2v": {"LoadVideo", "GetVideoComponents"},
+        "v2v": {"LoadVideo"},
         "r2v": {"LoadImage"},
-        "rv2v": {"LoadImage", "LoadVideo", "GetVideoComponents"},
+        "rv2v": {"LoadImage", "LoadVideo"},
     }[task]
     present_media = {node["type"] for node in nodes.values()} & {"LoadImage", "LoadVideo", "GetVideoComponents"}
     if present_media != expected_media:
