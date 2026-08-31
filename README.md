@@ -27,7 +27,8 @@ Bernini v2 会先用 Qwen2.5-VL 规划画面和动作，再交给 Wan2.2 双专�
 
 ### 安装节点
 
-在 ComfyUI-Manager 中搜索 `Bernini v2 (Native)`，或手动安装：
+在 ComfyUI-Manager 中搜索
+[`Bernini v2 (Native)`](https://registry.comfy.org/nodes/bernini-v2-t8)，或手动安装：
 
 ```powershell
 cd C:/path/to/ComfyUI/custom_nodes
@@ -83,8 +84,8 @@ ComfyUI/models/
 ### 实测情况
 
 - 测试设备：RTX 5090 Laptop 24 GB、64 GB 内存。
-- Balanced INT8 完整 T2V：640×368、33 帧、40 个渲染步。
-- 峰值 ComfyUI 可见显存约 16.51 GiB。
+- 当前 Core 候选实现按官方 T2V 预设完成 640×368、33 帧测试。
+- 官方 50/1/50 步测试峰值 ComfyUI 可见显存约 23.26 GiB。
 - T2V、V2V、R2V、RV2V 的两秒长边 640 测试均通过。
 - 同一 ComfyUI 进程连续运行两个任务后，显存和内存可以回落。
 
@@ -126,8 +127,9 @@ It supports all six released tasks: `t2i`, `i2i`, `t2v`, `v2v`, `r2v`, and
 
 ### Install
 
-Install `Bernini v2 (Native)` from ComfyUI-Manager, or clone this repository
-into `ComfyUI/custom_nodes`, then restart ComfyUI.
+Install [`Bernini v2 (Native)`](https://registry.comfy.org/nodes/bernini-v2-t8)
+from ComfyUI-Manager, or clone this repository into `ComfyUI/custom_nodes`,
+then restart ComfyUI.
 
 Download the recommended 45.62 GiB Balanced INT8 package:
 

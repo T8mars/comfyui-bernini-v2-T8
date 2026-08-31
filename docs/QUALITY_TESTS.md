@@ -17,6 +17,7 @@ balanced-INT8 T2V acceptance uses the current 640x368, 33-frame test budget.
 | I2I | 512x512 PNG | 659.97 s | reference identity/composition preserved with requested change | `997d2359db10a8776e3b86d926b88c9e6c5c52ed8255872df22226555b29d0ce` |
 | T2V | 848x480, 81 frames, 5.0625 s | 4160.44 s | coherent fox walk with continuous motion | `b9b1446ac9c50516397646579b60ff696df7ecb178818945a084eadbf66c9571` |
 | T2V balanced INT8 | 640x368, 33 frames, 2.0625 s | 1651.98 s | sharp, coherent fox walk; no visible quantization collapse | `061c3380c7ace7f5d7c74f51fdbef45cfe89084c1523ae7baeb0dd131132442f` |
+| T2V current Core candidate | 640x368, 33 frames, 2.063 s | 1756.39 s | official 50/1/50 preset; sharp coherent fox walk, 33 unique frames | `df443d0e577af8e8ef36bf81b2d694cd683b7058ec44350d2dbf5c55d45c80d2` |
 | V2V | 848x480, 33 frames, 2.0625 s | 3769.25 s | official dog scene and motion preserved; stable snowman added | `853d5ad0cd8d2043184655bde551f6b6320a3c8b3b715c71e973c9a3829895f6` |
 | R2V | 848x480, 33 frames, 2.0625 s | 4080.58 s | all five official references integrated into one stable scene | `c98aafe34bf3ae78e71db9d84cdca2392af623cade9bbda7f4374dc51434a462` |
 | RV2V | 368x640, 33 frames, 2.0625 s | 7133.09 s | reference shirt applied; inner shirt, identity, scene, and motion preserved | `201fdfeb018b709374cad7aa2f601072036dc0721a84e10a8b5cb790437b2557` |
@@ -32,6 +33,13 @@ Accepted video deliverables:
 - `artifacts/quality/bernini_v2_v2v_official_case1_848x480_33f.mp4`
 - `artifacts/quality/bernini_v2_r2v_official_5ref_848x480_33f.mp4`
 - `artifacts/quality/bernini_v2_rv2v_official_case1_long640_33f.mp4`
+
+The current-Core candidate result and its inspection images are published with
+the model package:
+
+- <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-640x368-33f.mp4>
+- <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-contact.png>
+- <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-frame16.png>
 
 ## T2I baseline details
 
