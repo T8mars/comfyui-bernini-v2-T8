@@ -6,12 +6,18 @@ tests/
 .pytest_cache/
 .ruff_cache/
 
-# Repository-only workflow generation and regression runners. These are not
-# needed at runtime, and packaging them causes false-positive Registry network
-# findings from development graph wiring and localhost smoke-test HTTP calls.
-tools/build_example_workflows.py
-tools/build_frontend_workflows.py
-tools/run_comfy_smoke.py
-tools/run_comfy_quality.py
-tools/smoke_load_components.py
-tools/validate_comfy_wan_mapping.py
+# Exporters, downloaders, quantizers, workflow generators, and regression
+# runners are source-repository tooling.  None is imported by the ComfyUI
+# extension at runtime, and shipping them in a Manager package unnecessarily
+# exposes network/subprocess code to Registry security scanning.
+tools/
+
+# Source-only Diffusers/repack helpers.  The installed node runtime accepts
+# only standalone ComfyUI text-encoder and diffusion-model safetensors.
+bernini_v2/checkpoint_info.py
+bernini_v2/index.py
+bernini_v2/manifest.py
+bernini_v2/quantization.py
+bernini_v2/sharded.py
+bernini_v2/state_dict.py
+bernini_v2/wan_mapping.py
