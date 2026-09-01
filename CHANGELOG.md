@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3 - 2026-09-02
+
+- Reject duplicate or increasing flow sigma schedules before UniPC coefficient
+  calculation; Bernini's scheduler already produces strictly decreasing sigmas.
+
 ## 0.3.2 - 2026-09-02
 
 - Align the renderer loader's API fallback with its BF16 schema default and
