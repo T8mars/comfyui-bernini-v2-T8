@@ -8,6 +8,8 @@ __pycache__/
 .publish-env/
 node.zip
 artifacts/metrics/
+artifacts/hf-release/
+artifacts/single-file-*/
 artifacts/qa/int8_smoke_*
 artifacts/qa/*.framemd5
 artifacts/qa/*_t2v_mid12_20_grid.png

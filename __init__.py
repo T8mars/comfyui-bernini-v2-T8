@@ -8,7 +8,7 @@ async def comfy_entrypoint():
     from comfy_api.latest import ComfyExtension
     from typing_extensions import override
 
-    from .nodes.loaders import BerniniV2PlannerLoader, BerniniV2T5Loader, BerniniV2WanLoader
+    from .nodes.loaders import BerniniV2PlannerLoader, BerniniV2WanLoader
     from .nodes.planning import BerniniV2PlanNode
     from .nodes.rendering import BerniniV2RendererGuider, BerniniV2Scheduler, BerniniV2UniPCSampler
 
@@ -18,7 +18,6 @@ async def comfy_entrypoint():
             return [
                 BerniniV2WanLoader,
                 BerniniV2PlannerLoader,
-                BerniniV2T5Loader,
                 BerniniV2PlanNode,
                 BerniniV2RendererGuider,
                 BerniniV2Scheduler,

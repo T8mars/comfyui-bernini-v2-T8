@@ -39,7 +39,9 @@ def test_t2i_uses_official_text_conditions_bf16_and_flow_solver():
     assert graph["11"]["inputs"]["negative_prompt"] == OFFICIAL_DEFAULT_NEGATIVE
     assert graph["5"]["inputs"]["weight_dtype"] == "bfloat16"
     assert graph["6"]["inputs"]["weight_dtype"] == "bfloat16"
-    assert graph["2"]["inputs"]["dtype"] == "bfloat16"
+    assert graph["2"]["class_type"] == "CLIPLoader"
+    assert graph["2"]["inputs"]["type"] == "wan"
+    assert graph["2"]["inputs"]["device"] == "default"
     assert graph["15"]["class_type"] == "BerniniV2UniPCSampler"
 
 

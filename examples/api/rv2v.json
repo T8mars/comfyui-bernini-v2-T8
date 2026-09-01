@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "repack_manifest": "Bernini-v2-balanced-int8/repack-manifest.json",
+      "planner_name": "bernini_v2_planner_int8.safetensors",
       "dtype": "bfloat16"
     },
     "class_type": "BerniniV2PlannerLoader",
@@ -11,10 +11,11 @@
   },
   "2": {
     "inputs": {
-      "repack_manifest": "Bernini-v2-balanced-int8/repack-manifest.json",
-      "dtype": "bfloat16"
+      "clip_name": "umt5_xxl_bernini_v2_int8.safetensors",
+      "type": "wan",
+      "device": "default"
     },
-    "class_type": "BerniniV2T5Loader",
+    "class_type": "CLIPLoader",
     "_meta": {
       "title": "Load Bernini v2 T5"
     }
@@ -47,7 +48,7 @@
   },
   "5": {
     "inputs": {
-      "model_index": "Bernini-v2-balanced-int8/wan_high/model.safetensors.index.json",
+      "unet_name": "bernini_v2_high_noise_int8.safetensors",
       "flow_shift": 5.0,
       "weight_dtype": "bfloat16"
     },
@@ -58,7 +59,7 @@
   },
   "6": {
     "inputs": {
-      "model_index": "Bernini-v2-balanced-int8/wan_low/model.safetensors.index.json",
+      "unet_name": "bernini_v2_low_noise_int8.safetensors",
       "flow_shift": 5.0,
       "weight_dtype": "bfloat16"
     },

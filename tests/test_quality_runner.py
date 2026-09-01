@@ -48,20 +48,21 @@ def test_quality_runner_preserves_official_defaults_and_overrides_media() -> Non
     [
         ("native", "UNETLoader", "unet_name"),
         ("gguf", "UnetLoaderGGUF", "unet_name"),
-        ("bernini", "BerniniV2WanLoader", "model_index"),
+        ("bernini", "BerniniV2WanLoader", "unet_name"),
     ],
 )
 def test_quality_runner_can_override_only_the_renderer_pair(loader, class_type, input_name) -> None:
     graph = prepare_graph(
         "t2v",
-        repack_root="Bernini-v2-balanced-int8",
+        planner_name="bernini_v2_planner_int8.safetensors",
+        t5_name="umt5_xxl_bernini_v2_int8.safetensors",
         high_renderer="renderers/high.model",
         low_renderer="renderers/low.model",
         renderer_loader=loader,
     )
 
-    assert graph["1"]["inputs"]["repack_manifest"] == "Bernini-v2-balanced-int8/repack-manifest.json"
-    assert graph["2"]["inputs"]["repack_manifest"] == "Bernini-v2-balanced-int8/repack-manifest.json"
+    assert graph["1"]["inputs"]["planner_name"] == "bernini_v2_planner_int8.safetensors"
+    assert graph["2"]["inputs"]["clip_name"] == "umt5_xxl_bernini_v2_int8.safetensors"
     assert graph["5"]["class_type"] == class_type
     assert graph["6"]["class_type"] == class_type
     expected_high = "renderers/high.model" if loader == "bernini" else str(Path("renderers/high.model"))

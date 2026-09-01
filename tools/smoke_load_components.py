@@ -22,7 +22,7 @@ def parameter_report(module) -> dict[str, int]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--comfy", type=Path, required=True)
-    parser.add_argument("--repack", type=Path, required=True)
+    parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("component", choices=("planner", "t5", "wan_high", "wan_low"))
     args = parser.parse_args()
 
@@ -35,7 +35,7 @@ def main() -> None:
     if args.component == "planner":
         from bernini_v2.runtime import load_planner_runtime
 
-        runtime = load_planner_runtime(args.repack, dtype=torch.bfloat16)
+        runtime = load_planner_runtime(args.checkpoint, dtype=torch.bfloat16)
         report = {
             "language": parameter_report(runtime.language_model),
             "vision": parameter_report(runtime.vision_model),
@@ -45,7 +45,7 @@ def main() -> None:
     elif args.component == "t5":
         from bernini_v2.runtime import load_wan_t5
 
-        clip = load_wan_t5(args.repack)
+        clip = load_wan_t5(args.checkpoint)
         report = {
             "clip": type(clip).__name__,
             "patcher": type(clip.patcher).__name__,
@@ -54,19 +54,11 @@ def main() -> None:
     else:
         import comfy.sd
 
-        from bernini_v2.sharded import load_sharded_state_dict
-
-        index = args.repack / args.component / "model.safetensors.index.json"
-        state_dict = load_sharded_state_dict(index)
-        state_tensor_count = len(state_dict)
-        model = comfy.sd.load_diffusion_model_state_dict(state_dict, model_options={})
-        if model is None:
-            raise RuntimeError(f"ComfyUI did not detect {args.component}")
+        model = comfy.sd.load_diffusion_model(str(args.checkpoint), model_options={})
         report = {
             "patcher": type(model).__name__,
             "base_model": type(model.model).__name__,
             "diffusion_model": type(model.model.diffusion_model).__name__,
-            "state_tensors": state_tensor_count,
             **parameter_report(model.model.diffusion_model),
         }
     print(json.dumps({"component": args.component, **report}, indent=2, sort_keys=True))

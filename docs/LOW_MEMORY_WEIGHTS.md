@@ -1,9 +1,17 @@
 # Low-memory weights and runtime
 
-## Supported native packages
+## Supported standalone models
 
-All first-party packages remain ordinary safetensors with stock ComfyUI
-quantization metadata. No quantization kernel is vendored by this node pack.
+All first-party user-facing weights are ordinary **single-file** safetensors
+with stock ComfyUI quantization metadata. No Diffusers directory, shard index,
+repack manifest, or custom quantization kernel is required at runtime.
+
+| File | ComfyUI directory |
+|---|---|
+| `bernini_v2_planner_{profile}.safetensors` | `models/text_encoders` |
+| `umt5_xxl_bernini_v2_{profile}.safetensors` | `models/text_encoders` |
+| `bernini_v2_high_noise_{profile}.safetensors` | `models/diffusion_models` |
+| `bernini_v2_low_noise_{profile}.safetensors` | `models/diffusion_models` |
 
 | Profile | Quantized components | Intended use |
 |---|---|---|
@@ -16,7 +24,7 @@ FP32 `[out,1]` scale, and dynamic INT8 activations. It is the stock format
 documented by [Comfy Quants](https://github.com/Comfy-Org/comfy-quants/blob/main/docs/formats/int8_tensorwise.md),
 not the retired `int8_w8a8` custom-node format.
 
-The validated `balanced` package occupies 45.62 GiB versus 83.03 GiB for the
+The validated standalone `balanced` files occupy 45.63 GiB versus 83.04 GiB for the
 true BF16 package, a 45.1% reduction. It quantizes 1,300 Linear layers (403 in
 each Wan expert, 326 in Qwen, and 168 in UMT5). Reconstruction cosine is
 0.999954 on average and 0.999938 at worst; relative error is 0.967% on average
@@ -49,12 +57,19 @@ python tools/quantize_repack.py `
 Then remove `--dry-run` to convert. The output contains
 `quantization-report.json` with per-layer cosine/error/status evidence.
 
-Validate the two renderer experts independently of the package manifest:
+Export the conversion workspace to the four runtime files, then validate the
+complete single-file set:
 
 ```powershell
-python tools/validate_renderer_pair.py `
-  --high C:/ComfyUI/models/bernini_v2/Bernini-v2-balanced-int8/wan_high/model.safetensors.index.json `
-  --low C:/ComfyUI/models/bernini_v2/Bernini-v2-balanced-int8/wan_low/model.safetensors.index.json
+python tools/export_single_files.py `
+  --source C:/path/to/Bernini-v2-balanced-int8 `
+  --output C:/path/to/Bernini-v2-single-int8 `
+  --profile int8
+python tools/validate_single_files.py `
+  --planner C:/path/to/Bernini-v2-single-int8/bernini_v2_planner_int8.safetensors `
+  --t5 C:/path/to/Bernini-v2-single-int8/umt5_xxl_bernini_v2_int8.safetensors `
+  --high C:/path/to/Bernini-v2-single-int8/bernini_v2_high_noise_int8.safetensors `
+  --low C:/path/to/Bernini-v2-single-int8/bernini_v2_low_noise_int8.safetensors
 ```
 
 This reads safetensors headers and tiny `comfy_quant` markers rather than the
@@ -95,12 +110,11 @@ or the requested VIT target exceeds the checkpoint mask-token capacity.
 
 Native NVFP4/FP8 Wan safetensors, including the Bernini **v2** files from
 [rzgar/Bernini-v2-ComfyUI](https://huggingface.co/rzgar/Bernini-v2-ComfyUI),
-already use stock Comfy quantization markers. They can be loaded with Core's
-`Load Diffusion Model` from `models/diffusion_models`, then connected directly
-to the two `MODEL` inputs of `Bernini v2 Renderer Guider`. Alternatively, place
-one file in a path containing `wan_high` or `wan_low` under
-`models/bernini_v2`; this package's renderer loader accepts single safetensors
-as well as shard indexes. Run `validate_renderer_pair.py` before loading.
+already use stock Comfy quantization markers. Place them in
+`models/diffusion_models` and select them in the Bernini renderer loaders, or
+load them with Core's `Load Diffusion Model` and connect the resulting models
+to the guider. Runtime shard indexes are intentionally unsupported. Run
+`validate_renderer_pair.py` before loading.
 
 Do not mix Bernini-R weights with Bernini v2, do not pair experts from different
 releases, and do not apply an additional FP8 cast to an already quantized file.
@@ -118,7 +132,6 @@ renderers:
 ```powershell
 python tools/run_comfy_quality.py t2v `
   --width 640 --height 368 --length 33 `
-  --repack-root Bernini-v2-balanced-int8 `
   --renderer-loader native `
   --high-renderer "Bernini_v2_NVFP4/high.safetensors" `
   --low-renderer "Bernini_v2_NVFP4/low.safetensors"

@@ -13,23 +13,25 @@ from typing import Any
 try:
     from tools.build_example_workflows import (
         DEFAULT_PROMPT,
-        HIGH_INDEX,
-        LOW_INDEX,
-        MANIFEST,
+        HIGH_NAME,
+        LOW_NAME,
         OFFICIAL_DEFAULT_NEGATIVE,
         OFFICIAL_VIDEO_NEGATIVE,
+        PLANNER_NAME,
         SYSTEM_PROMPT,
+        T5_NAME,
         VAE_NAME,
     )
 except ModuleNotFoundError:  # Direct execution sets tools/ as sys.path[0].
     from build_example_workflows import (
         DEFAULT_PROMPT,
-        HIGH_INDEX,
-        LOW_INDEX,
-        MANIFEST,
+        HIGH_NAME,
+        LOW_NAME,
         OFFICIAL_DEFAULT_NEGATIVE,
         OFFICIAL_VIDEO_NEGATIVE,
+        PLANNER_NAME,
         SYSTEM_PROMPT,
+        T5_NAME,
         VAE_NAME,
     )
 
@@ -178,11 +180,16 @@ def build_frontend_workflow(task: str) -> dict[str, Any]:
     image_task = task in {"t2i", "i2i"}
 
     graph.add(
-        1, "BerniniV2PlannerLoader", (0, 0), (350, 110), [MANIFEST, "bfloat16"], [("planner", "BERNINI_V2_PLANNER")]
+        1,
+        "BerniniV2PlannerLoader",
+        (0, 0),
+        (350, 110),
+        [PLANNER_NAME, "bfloat16"],
+        [("planner", "BERNINI_V2_PLANNER")],
     )
-    graph.add(2, "BerniniV2T5Loader", (0, 150), (350, 110), [MANIFEST, "bfloat16"], [("CLIP", "CLIP")])
-    graph.add(5, "BerniniV2WanLoader", (0, 300), (350, 130), [HIGH_INDEX, 5.0, "bfloat16"], [("MODEL", "MODEL")])
-    graph.add(6, "BerniniV2WanLoader", (0, 470), (350, 130), [LOW_INDEX, 5.0, "bfloat16"], [("MODEL", "MODEL")])
+    graph.add(2, "CLIPLoader", (0, 150), (350, 110), [T5_NAME, "wan", "default"], [("CLIP", "CLIP")])
+    graph.add(5, "BerniniV2WanLoader", (0, 300), (350, 130), [HIGH_NAME, 5.0, "bfloat16"], [("MODEL", "MODEL")])
+    graph.add(6, "BerniniV2WanLoader", (0, 470), (350, 130), [LOW_NAME, 5.0, "bfloat16"], [("MODEL", "MODEL")])
     graph.add(7, "VAELoader", (0, 640), (350, 90), [VAE_NAME], [("VAE", "VAE")])
     graph.add(3, "CLIPTextEncode", (420, 0), (460, 190), [t5_prompt], [("CONDITIONING", "CONDITIONING")])
     graph.add(4, "CLIPTextEncode", (420, 230), (460, 220), [negative], [("CONDITIONING", "CONDITIONING")])

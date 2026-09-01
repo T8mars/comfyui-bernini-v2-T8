@@ -32,13 +32,13 @@
         "Node name for S&R": "BerniniV2PlannerLoader"
       },
       "widgets_values": [
-        "Bernini-v2-balanced-int8/repack-manifest.json",
+        "bernini_v2_planner_int8.safetensors",
         "bfloat16"
       ]
     },
     {
       "id": 2,
-      "type": "BerniniV2T5Loader",
+      "type": "CLIPLoader",
       "pos": [
         0,
         150
@@ -62,11 +62,12 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "BerniniV2T5Loader"
+        "Node name for S&R": "CLIPLoader"
       },
       "widgets_values": [
-        "Bernini-v2-balanced-int8/repack-manifest.json",
-        "bfloat16"
+        "umt5_xxl_bernini_v2_int8.safetensors",
+        "wan",
+        "default"
       ]
     },
     {
@@ -97,7 +98,7 @@
         "Node name for S&R": "BerniniV2WanLoader"
       },
       "widgets_values": [
-        "Bernini-v2-balanced-int8/wan_high/model.safetensors.index.json",
+        "bernini_v2_high_noise_int8.safetensors",
         5.0,
         "bfloat16"
       ]
@@ -130,7 +131,7 @@
         "Node name for S&R": "BerniniV2WanLoader"
       },
       "widgets_values": [
-        "Bernini-v2-balanced-int8/wan_low/model.safetensors.index.json",
+        "bernini_v2_low_noise_int8.safetensors",
         5.0,
         "bfloat16"
       ]

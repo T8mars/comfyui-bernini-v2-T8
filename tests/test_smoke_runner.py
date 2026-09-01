@@ -47,7 +47,15 @@ def test_prepare_graph_sets_media_and_output_names():
     assert graph["19"]["inputs"]["filename_prefix"] == "checks/rv2v"
 
 
-def test_prepare_graph_can_switch_weight_package():
-    graph = MODULE.prepare_graph("t2v", repack_root="Bernini-v2-bf16-native")
-    assert graph["1"]["inputs"]["repack_manifest"] == "Bernini-v2-bf16-native/repack-manifest.json"
-    assert graph["5"]["inputs"]["model_index"].startswith("Bernini-v2-bf16-native/")
+def test_prepare_graph_can_switch_single_files():
+    graph = MODULE.prepare_graph(
+        "t2v",
+        planner_name="bernini_v2_planner_bf16.safetensors",
+        t5_name="umt5_xxl_bernini_v2_bf16.safetensors",
+        high_renderer="bernini_v2_high_noise_bf16.safetensors",
+        low_renderer="bernini_v2_low_noise_bf16.safetensors",
+    )
+    assert graph["1"]["inputs"]["planner_name"] == "bernini_v2_planner_bf16.safetensors"
+    assert graph["2"]["inputs"]["clip_name"] == "umt5_xxl_bernini_v2_bf16.safetensors"
+    assert graph["5"]["inputs"]["unet_name"] == "bernini_v2_high_noise_bf16.safetensors"
+    assert graph["6"]["inputs"]["unet_name"] == "bernini_v2_low_noise_bf16.safetensors"

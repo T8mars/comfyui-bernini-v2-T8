@@ -217,9 +217,9 @@ def repack(
         source_metadata = source / relative_path
         if not source_metadata.is_file():
             continue
-            target_metadata = output / relative_path
-            target_metadata.parent.mkdir(parents=True, exist_ok=True)
-            _copy_file_atomic(source_metadata, target_metadata)
+        target_metadata = output / relative_path
+        target_metadata.parent.mkdir(parents=True, exist_ok=True)
+        _copy_file_atomic(source_metadata, target_metadata)
         copied_metadata.append(relative_path.as_posix())
     report["metadata_files"] = copied_metadata
     output_indexes: dict[Component, dict[str, str]] = defaultdict(dict)
