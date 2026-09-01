@@ -105,10 +105,24 @@ as well as shard indexes. Run `validate_renderer_pair.py` before loading.
 Do not mix Bernini-R weights with Bernini v2, do not pair experts from different
 releases, and do not apply an additional FP8 cast to an already quantized file.
 The Rzgar NVFP4 files expose `{"format":"nvfp4"}` markers and the stock
-`model.diffusion_model.` key prefix. NVFP4 is a Blackwell/current-CUDA
-performance lane; the verified PyTorch 2.7/CUDA 12.8 compatibility environment
-is not used to make an NVFP4 speed or quality claim. Treat official BF16 output
-as the visual reference when evaluating external files.
+`model.diffusion_model.` key prefix. A production-step 640x368, 33-frame T2V
+quality gate passes with the Balanced-INT8 planner and both external renderers.
+That run uses PyTorch 2.11/CUDA 12.8 eager operations and a competing GPU
+process, so it is not a speed or isolated-memory acceptance. NVFP4 remains a
+Blackwell/current-CUDA performance lane; treat official BF16 output as the
+visual reference and rerun on CUDA 13 before making performance claims.
+
+The quality runner can keep the native planner while replacing only the
+renderers:
+
+```powershell
+python tools/run_comfy_quality.py t2v `
+  --width 640 --height 368 --length 33 `
+  --repack-root Bernini-v2-balanced-int8 `
+  --renderer-loader native `
+  --high-renderer "Bernini_v2_NVFP4/high.safetensors" `
+  --low-renderer "Bernini_v2_NVFP4/low.safetensors"
+```
 
 Older `*_fp8_scaled.safetensors` files use the legacy `scaled_fp8` sentinel and
 `.scale_weight` tensors instead of per-layer `comfy_quant` markers. The loader
@@ -123,9 +137,12 @@ standard `MODEL` outputs directly to `Bernini v2 Renderer Guider`. Keep the
 Bernini planner auxiliary components in the native package. This bridge does
 not add a GGUF dependency to the node pack and is not part of the Core PR.
 
-GGUF and NVFP4 remain external experimental renderer lanes. Neither has a
-published Bernini v2 end-to-end quality, speed, or memory acceptance result yet;
-the Balanced INT8 package remains the verified low-memory recommendation.
+GGUF and NVFP4 remain external experimental renderer lanes. NVFP4 now has a
+production-step visual acceptance, but optimized speed, isolated memory, and
+repeat-lifecycle gates remain pending. No public Bernini v2 high/low GGUF pair
+was found in the referenced model repository or a Hugging Face model search, so
+GGUF still has no end-to-end acceptance. Balanced INT8 remains the verified
+low-memory recommendation.
 
 The node pack deliberately does not wrap or vendor ComfyUI-GGUF's converter.
 Wan GGUF conversion has separate 5-D tensor repair and llama.cpp quantization

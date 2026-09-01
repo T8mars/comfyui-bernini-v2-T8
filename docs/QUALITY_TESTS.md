@@ -17,6 +17,7 @@ balanced-INT8 T2V acceptance uses the current 640x368, 33-frame test budget.
 | I2I | 512x512 PNG | 659.97 s | reference identity/composition preserved with requested change | `997d2359db10a8776e3b86d926b88c9e6c5c52ed8255872df22226555b29d0ce` |
 | T2V | 848x480, 81 frames, 5.0625 s | 4160.44 s | coherent fox walk with continuous motion | `b9b1446ac9c50516397646579b60ff696df7ecb178818945a084eadbf66c9571` |
 | T2V balanced INT8 | 640x368, 33 frames, 2.0625 s | 1651.98 s | sharp, coherent fox walk; no visible quantization collapse | `061c3380c7ace7f5d7c74f51fdbef45cfe89084c1523ae7baeb0dd131132442f` |
+| T2V external NVFP4 renderers | 640x368, 33 frames, 2.0625 s | 1518.03 s | coherent fox walk; no visible quantization collapse; CUDA 12.8 eager quality gate only | `4fb35e38321f19ad069ac7f7c6e0b5a414adcb466a0158398cfcbb3d5068786e` |
 | T2V current Core candidate | 640x368, 33 frames, 2.063 s | 1756.39 s | official 50/1/50 preset; sharp coherent fox walk, 33 unique frames | `df443d0e577af8e8ef36bf81b2d694cd683b7058ec44350d2dbf5c55d45c80d2` |
 | V2V | 848x480, 33 frames, 2.0625 s | 3769.25 s | official dog scene and motion preserved; stable snowman added | `853d5ad0cd8d2043184655bde551f6b6320a3c8b3b715c71e973c9a3829895f6` |
 | R2V | 848x480, 33 frames, 2.0625 s | 4080.58 s | all five official references integrated into one stable scene | `c98aafe34bf3ae78e71db9d84cdca2392af623cade9bbda7f4374dc51434a462` |
@@ -30,6 +31,7 @@ Accepted video deliverables:
 
 - `artifacts/quality/bernini_v2_t2v_full_848x480_81f.mp4`
 - `artifacts/quality/bernini_v2_t2v_balanced_int8_long640_33f.mp4`
+- `artifacts/quality/bernini_v2_t2v_nvfp4_long640_33f.mp4`
 - `artifacts/quality/bernini_v2_v2v_official_case1_848x480_33f.mp4`
 - `artifacts/quality/bernini_v2_r2v_official_5ref_848x480_33f.mp4`
 - `artifacts/quality/bernini_v2_rv2v_official_case1_long640_33f.mp4`
@@ -40,6 +42,12 @@ the model package:
 - <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-640x368-33f.mp4>
 - <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-contact.png>
 - <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-frame16.png>
+
+The external-NVFP4 result and inspection images are also published:
+
+- <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/nvfp4-t2v-640x368-33f.mp4>
+- <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/nvfp4-t2v-9frame-grid.png>
+- <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/nvfp4-t2v-frame16.png>
 
 ## T2I baseline details
 
@@ -86,6 +94,40 @@ VRAM, 29.885 GiB peak process RSS, and 50.149 GiB peak process VMS/commit on the
 This is a visual usability gate, not a pixelwise BF16 comparison: the accepted
 BF16 baseline used 848x480 and 81 frames, so its planned target and camera path
 differ. A same-geometry latent/prediction oracle remains a Core-readiness item.
+
+## External-NVFP4 T2V acceptance
+
+The external renderer pair comes from immutable revision
+`d677618e260be0f6ec934d6c9f72876f89cffe62` of
+`rzgar/Bernini-v2-ComfyUI`. Both single-file checkpoints are 8,045,131,882
+bytes. Header inspection finds 2,313 tensors, all 40 Wan blocks, 406 `nvfp4`
+quantization markers, the stock `model.diffusion_model.` prefix, and identical
+normalized high/low key sets. The planner, Qwen, and UMT5 remain the validated
+Balanced-INT8 package; only the two renderer `MODEL` inputs change.
+
+The production run uses the same versioned fox prompt and seed 42 as the INT8
+gate, with 25 MaskGIT steps, 5 VIT denoising steps, 40 renderer steps, 640x368,
+33 frames, 16 fps, and a 2.0625-second duration. The result is a coherent fox
+walk with 33/33 unique decoded-frame hashes. Subject anatomy, snow texture, and
+motion remain usable with no block noise, frozen duplication, or gross temporal
+flicker. Backlit fur color varies more than in the Balanced-INT8 sample, and the
+known mild tail/rear-leg geometry issue remains, so this is a quality acceptance
+rather than a parity claim.
+
+This run deliberately does **not** establish an NVFP4 speed or isolated-memory
+win. The Windows host uses driver 576.28 (CUDA 12.9 maximum), PyTorch
+2.11.0+cu128, ComfyUI 0.34.0, and comfy-kitchen 0.2.31, so NVFP4 uses the eager
+backend. Wall time is 1,518.031 seconds. The 22.701 GiB device peak includes an
+unrelated IndexTTS process holding about 8.5 GiB, and the first version of the
+monitor sampled the venv launcher rather than its compute child; its recorded
+RSS/VMS values are invalid. A follow-up fixes process-tree sampling. An
+optimized CUDA-13 run with no competing GPU process remains required before
+publishing performance or memory comparisons.
+
+Compatibility failures are recorded rather than hidden: PyTorch 2.7+cu128
+lacks `torch.float4_e2m1fn_x2`, while PyTorch 2.12.1+cu130 cannot initialize on
+driver 576.28 (`cudaErrorNotSupported`). Neither failure is caused by the
+Bernini node graph or the checkpoint structure.
 
 ## Cause of the unusable reduced T2I image
 

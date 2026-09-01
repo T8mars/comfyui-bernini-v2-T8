@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Add explicit native, Bernini-loader, and ComfyUI-GGUF renderer overrides to
+  the production quality runner so the planner and renderer formats can be
+  tested independently.
+- Normalize external model names for Windows ComfyUI servers and aggregate
+  process-tree RSS/VMS when a virtual-environment launcher owns the server.
+- Record the first production-step external-NVFP4 T2V visual acceptance and
+  keep optimized CUDA-13 performance and GGUF acceptance as open gates.
+
 ## 0.2.2 - 2026-09-01
 
 - Remove the obsolete external package mirror from the published node package.

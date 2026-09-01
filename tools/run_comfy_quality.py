@@ -44,10 +44,22 @@ class ResourceMonitor:
             try:
                 import psutil
 
-                memory = psutil.Process(self.server_pid).memory_info()
-                self.peak_rss = max(self.peak_rss, int(memory.rss))
-                self.peak_vms = max(self.peak_vms, int(memory.vms))
-            except (ImportError, OSError):
+                root = psutil.Process(self.server_pid)
+                processes = [root, *root.children(recursive=True)]
+                rss = 0
+                vms = 0
+                for process in processes:
+                    try:
+                        memory = process.memory_info()
+                    except (OSError, psutil.Error):
+                        continue
+                    rss += int(memory.rss)
+                    vms += int(memory.vms)
+                self.peak_rss = max(self.peak_rss, rss)
+                self.peak_vms = max(self.peak_vms, vms)
+            except ImportError:
+                pass
+            except (OSError, psutil.Error):
                 pass
         self.samples += 1
 
@@ -74,6 +86,9 @@ def prepare_graph(
     output_prefix: str | None = None,
     prompt: str | None = None,
     repack_root: str | None = None,
+    high_renderer: str | None = None,
+    low_renderer: str | None = None,
+    renderer_loader: str = "bernini",
 ) -> dict[str, object]:
     """Load an example without disabling its published task defaults."""
 
@@ -85,6 +100,34 @@ def prepare_graph(
         graph["2"]["inputs"]["repack_manifest"] = f"{repack_root}/repack-manifest.json"
         graph["5"]["inputs"]["model_index"] = f"{repack_root}/wan_high/model.safetensors.index.json"
         graph["6"]["inputs"]["model_index"] = f"{repack_root}/wan_low/model.safetensors.index.json"
+    if (high_renderer is None) != (low_renderer is None):
+        raise ValueError("--high-renderer and --low-renderer must be supplied together")
+    if high_renderer is not None and low_renderer is not None:
+        if renderer_loader == "bernini":
+            graph["5"]["inputs"]["model_index"] = high_renderer
+            graph["6"]["inputs"]["model_index"] = low_renderer
+        elif renderer_loader == "native":
+            for node_id, filename, title in (
+                ("5", high_renderer, "Load high-noise renderer"),
+                ("6", low_renderer, "Load low-noise renderer"),
+            ):
+                graph[node_id] = {
+                    "inputs": {"unet_name": str(Path(filename)), "weight_dtype": "default"},
+                    "class_type": "UNETLoader",
+                    "_meta": {"title": title},
+                }
+        elif renderer_loader == "gguf":
+            for node_id, filename, title in (
+                ("5", high_renderer, "Load high-noise GGUF renderer"),
+                ("6", low_renderer, "Load low-noise GGUF renderer"),
+            ):
+                graph[node_id] = {
+                    "inputs": {"unet_name": str(Path(filename))},
+                    "class_type": "UnetLoaderGGUF",
+                    "_meta": {"title": title},
+                }
+        else:
+            raise ValueError(f"unsupported renderer loader: {renderer_loader}")
     plan = graph["11"]["inputs"]
     if width is not None:
         plan["width"] = width
@@ -132,12 +175,30 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-prefix")
     parser.add_argument("--prompt")
     parser.add_argument("--repack-root")
+    parser.add_argument(
+        "--high-renderer",
+        help="High-noise renderer path/name, paired with --low-renderer.",
+    )
+    parser.add_argument(
+        "--low-renderer",
+        help="Low-noise renderer path/name, paired with --high-renderer.",
+    )
+    parser.add_argument(
+        "--renderer-loader",
+        choices=("bernini", "native", "gguf"),
+        default="bernini",
+        help="Loader for explicit renderer overrides.",
+    )
     parser.add_argument("--timeout", type=float, default=7200)
     parser.add_argument("--poll-interval", type=float, default=2)
     parser.add_argument(
         "--repeat", type=int, default=1, help="Queue identical jobs consecutively in one server process"
     )
-    parser.add_argument("--server-pid", type=int, help="Optional ComfyUI PID for RSS/commit sampling")
+    parser.add_argument(
+        "--server-pid",
+        type=int,
+        help="Optional ComfyUI root PID for process-tree RSS/commit sampling",
+    )
     parser.add_argument("--metrics-out", type=Path, help="Optional JSON result path")
     return parser.parse_args()
 
@@ -154,6 +215,9 @@ def main() -> None:
         output_prefix=args.output_prefix,
         prompt=args.prompt,
         repack_root=args.repack_root,
+        high_renderer=args.high_renderer,
+        low_renderer=args.low_renderer,
+        renderer_loader=args.renderer_loader,
     )
     if args.repeat < 1:
         raise ValueError("--repeat must be at least 1")
@@ -176,7 +240,17 @@ def main() -> None:
         result["run"] = run_number
         result["elapsed_seconds"] = round(time.monotonic() - started, 3)
         results.append(result)
-    payload = {"task": args.task, "repeat": args.repeat, "runs": results, "resources": monitor.report()}
+    payload = {
+        "task": args.task,
+        "repeat": args.repeat,
+        "renderer": {
+            "loader": args.renderer_loader,
+            "high": args.high_renderer,
+            "low": args.low_renderer,
+        },
+        "runs": results,
+        "resources": monitor.report(),
+    }
     if args.metrics_out is not None:
         args.metrics_out.parent.mkdir(parents=True, exist_ok=True)
         args.metrics_out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")

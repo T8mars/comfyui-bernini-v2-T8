@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import sys
+from collections import namedtuple
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
-from run_comfy_quality import prepare_graph  # noqa: E402
+import run_comfy_quality  # noqa: E402
+from run_comfy_quality import ResourceMonitor, prepare_graph  # noqa: E402
 
 
 def test_quality_runner_preserves_official_defaults_and_overrides_media() -> None:
@@ -36,3 +41,63 @@ def test_quality_runner_preserves_official_defaults_and_overrides_media() -> Non
     assert graph["11"]["inputs"]["prompt"] == "Preserve the dog and add a snowman."
     assert graph["3"]["inputs"]["text"].endswith("Preserve the dog and add a snowman.")
     assert graph["19"]["inputs"]["filename_prefix"] == "video/Bernini-v2/quality/rv2v_acceptance"
+
+
+@pytest.mark.parametrize(
+    ("loader", "class_type", "input_name"),
+    [
+        ("native", "UNETLoader", "unet_name"),
+        ("gguf", "UnetLoaderGGUF", "unet_name"),
+        ("bernini", "BerniniV2WanLoader", "model_index"),
+    ],
+)
+def test_quality_runner_can_override_only_the_renderer_pair(loader, class_type, input_name) -> None:
+    graph = prepare_graph(
+        "t2v",
+        repack_root="Bernini-v2-balanced-int8",
+        high_renderer="renderers/high.model",
+        low_renderer="renderers/low.model",
+        renderer_loader=loader,
+    )
+
+    assert graph["1"]["inputs"]["repack_manifest"] == "Bernini-v2-balanced-int8/repack-manifest.json"
+    assert graph["2"]["inputs"]["repack_manifest"] == "Bernini-v2-balanced-int8/repack-manifest.json"
+    assert graph["5"]["class_type"] == class_type
+    assert graph["6"]["class_type"] == class_type
+    expected_high = "renderers/high.model" if loader == "bernini" else str(Path("renderers/high.model"))
+    expected_low = "renderers/low.model" if loader == "bernini" else str(Path("renderers/low.model"))
+    assert graph["5"]["inputs"][input_name] == expected_high
+    assert graph["6"]["inputs"][input_name] == expected_low
+
+
+def test_quality_runner_rejects_half_a_renderer_pair() -> None:
+    with pytest.raises(ValueError, match="must be supplied together"):
+        prepare_graph("t2v", high_renderer="renderers/high.safetensors")
+
+
+def test_resource_monitor_aggregates_venv_child_processes(monkeypatch) -> None:
+    memory = namedtuple("memory", "rss vms")
+
+    class FakeProcess:
+        def __init__(self, rss, vms, children=()):
+            self._memory = memory(rss, vms)
+            self._children = list(children)
+
+        def children(self, recursive=False):
+            assert recursive is True
+            return self._children
+
+        def memory_info(self):
+            return self._memory
+
+    child = FakeProcess(200, 400)
+    root = FakeProcess(100, 300, [child])
+    fake_psutil = SimpleNamespace(Process=lambda pid: root, Error=RuntimeError)
+    monkeypatch.setitem(sys.modules, "psutil", fake_psutil)
+    monkeypatch.setattr(run_comfy_quality, "request_json", lambda url: {"devices": []})
+
+    monitor = ResourceMonitor("http://127.0.0.1:8199", server_pid=123)
+    monitor.sample()
+
+    assert monitor.peak_rss == 300
+    assert monitor.peak_vms == 700

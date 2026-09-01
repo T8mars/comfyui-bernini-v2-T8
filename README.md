@@ -96,6 +96,8 @@ ComfyUI/models/
 - 测试设备：RTX 5090 Laptop 24 GB、64 GB 内存。
 - 当前 Core 候选实现按官方 T2V 预设完成 640×368、33 帧测试。
 - 官方 50/1/50 步测试峰值 ComfyUI 可见显存约 23.26 GiB。
+- 外部 NVFP4 双 renderer 已通过 640×368、33 帧、25/5/40 步画质门；
+  CUDA 13 优化速度和独占显存对比仍待验证。
 - T2V、V2V、R2V、RV2V 的两秒长边 640 测试均通过。
 - 同一 ComfyUI 进程连续运行两个任务后，显存和内存可以回落。
 
@@ -177,6 +179,10 @@ and repeat-run tests. The native Core implementation is submitted as
 [issue #15702](https://github.com/Comfy-Org/ComfyUI/issues/15702). Review notes
 live in
 [`docs/CORE_MERGE_PLAN.md`](docs/CORE_MERGE_PLAN.md).
+
+An external NVFP4 renderer pair also passes the production-step 640x368,
+33-frame T2V visual gate. This was a CUDA 12.8 eager-path quality run; CUDA 13
+optimized speed and isolated-memory results remain pending.
 
 ```powershell
 python -m pytest
