@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Record that Comfy Registry release 0.3.3 is Active and that Core PR #16019 is
+  mergeable with all checks passing and no unresolved review threads.
+- Add the clean-reboot, no-competing-GPU Core-only official 50/1/50 T2V rerun:
+  640x368, 33 frames, 1,024.58 seconds, 16.585 GiB peak ComfyUI-visible VRAM,
+  and 33 unique decoded frames.
+
 ## 0.3.3 - 2026-09-02
 
 - Reject duplicate or increasing flow sigma schedules before UniPC coefficient

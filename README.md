@@ -35,6 +35,8 @@ Bernini v2 会先用 Qwen2.5-VL 规划画面和动作，再交给 Wan2.2 双专�
 在 ComfyUI-Manager 中搜索
 [`Bernini v2 (Native)`](https://registry.comfy.org/nodes/bernini-v2-t8)，或手动安装：
 
+Registry 版本 `0.3.3` 已通过审核，当前状态为 `Active`。
+
 ```powershell
 cd C:/path/to/ComfyUI/custom_nodes
 git clone https://github.com/T8mars/comfyui-bernini-v2-T8.git
@@ -107,7 +109,11 @@ ComfyUI/models/
 
 - 测试设备：RTX 5090 Laptop 24 GB、64 GB 内存。
 - 当前 Core 候选实现按官方 T2V 预设完成 640×368、33 帧测试。
-- 官方 50/1/50 步测试峰值 ComfyUI 可见显存约 23.26 GiB。
+- 无其他 GPU 计算进程的冷启动复测按官方 50/1/50 步在 1,024.58 秒
+  （约 17 分 05 秒）完成，峰值 ComfyUI 可见显存 16.59 GiB。
+- 此前同一兼容栈的成功基线为 1,756.39 秒、23.26 GiB；PyTorch 2.7 +
+  CUDA 12.8 eager/offload 路径会受宿主机内存和进程状态影响，四小时未完成
+  不属于正常基线。
 - 外部 NVFP4 双 renderer 已通过 640×368、33 帧、25/5/40 步画质门；
   CUDA 13 优化速度和独占显存对比仍待验证。
 - Q4_K_S GGUF 双 renderer 已通过同规格画质门，33 帧全部唯一；双文件
@@ -122,7 +128,8 @@ ComfyUI/models/
 
 原生 Core 实现已提交到
 [ComfyUI PR #16019](https://github.com/Comfy-Org/ComfyUI/pull/16019)。旧的分片方案
-[#16001](https://github.com/Comfy-Org/ComfyUI/pull/16001) 已关闭。
+[#16001](https://github.com/Comfy-Org/ComfyUI/pull/16001) 已关闭。当前 PR 可合并、
+全部 CI 通过、无未解决审查线程，正在等待维护者审查。
 
 ### 自己转换权重
 
@@ -169,6 +176,8 @@ Install [`Bernini v2 (Native)`](https://registry.comfy.org/nodes/bernini-v2-t8)
 from ComfyUI-Manager, or clone this repository into `ComfyUI/custom_nodes`,
 then restart ComfyUI.
 
+Registry release `0.3.3` is reviewed and `Active`.
+
 Download the recommended 45.63 GiB Balanced INT8 standalone files directly
 into the standard ComfyUI model folders:
 
@@ -206,6 +215,13 @@ Open a workflow from [`examples/workflows`](examples/workflows). Video examples
 use 33 frames at 16 fps with a 640-pixel long edge so the complete pipeline can
 be tested on a 24 GB GPU.
 
+On the RTX 5090 Laptop 24 GB test host, a clean reboot with no competing GPU
+process completed the Core-only official 50/1/50 T2V preset at 640x368 and 33
+frames in 1,024.58 seconds (about 17 minutes 5 seconds), with 16.59 GiB peak
+ComfyUI-visible VRAM. An earlier successful run on the same PyTorch 2.7 + CUDA
+12.8 eager/offload compatibility stack took 1,756.39 seconds and peaked at
+23.26 GiB, so host memory/process state materially affects this legacy path.
+
 ### Development and Core work
 
 The implementation is covered by unit, workflow, real-weight quality, memory,
@@ -213,7 +229,9 @@ and repeat-run tests. The native Core implementation is submitted as
 [ComfyUI PR #16019](https://github.com/Comfy-Org/ComfyUI/pull/16019), closing
 [issue #15702](https://github.com/Comfy-Org/ComfyUI/issues/15702). Review notes
 live in
-[`docs/CORE_MERGE_PLAN.md`](docs/CORE_MERGE_PLAN.md).
+[`docs/CORE_MERGE_PLAN.md`](docs/CORE_MERGE_PLAN.md). The PR is currently
+mergeable with all CI checks passing and no unresolved review threads; it is
+awaiting maintainer review.
 
 An external NVFP4 renderer pair also passes the production-step 640x368,
 33-frame T2V visual gate. This was a CUDA 12.8 eager-path quality run; CUDA 13

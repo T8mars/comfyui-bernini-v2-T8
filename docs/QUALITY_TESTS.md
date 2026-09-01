@@ -20,7 +20,8 @@ balanced-INT8 T2V acceptance uses the current 640x368, 33-frame test budget.
 | T2V standalone INT8 format gate | 640x368, 33 frames, 2.0625 s | 342.31 s | 5/2/10-step gate; recognizable coherent fox motion, 33 unique frames; not a production-quality preset | `3d1d1a96343f46314f85d03ee03b2f2ffcbac9cd2d05fb09a44664d28603c6e4` |
 | T2V external NVFP4 renderers | 640x368, 33 frames, 2.0625 s | 1518.03 s | coherent fox walk; no visible quantization collapse; CUDA 12.8 eager quality gate only | `4fb35e38321f19ad069ac7f7c6e0b5a414adcb466a0158398cfcbb3d5068786e` |
 | T2V GGUF Q4_K_S renderers | 640x368, 33 frames, 2.0625 s | 1319.91 s | coherent motion and 33 unique frames; mild facial softness and leg/tail merging; experimental | `8348dcc3baa37c782bd88867cf93dbd35622d9aef4b65454187d70724725f838` |
-| T2V current Core candidate | 640x368, 33 frames, 2.063 s | 1756.39 s | official 50/1/50 preset; sharp coherent fox walk, 33 unique frames | `df443d0e577af8e8ef36bf81b2d694cd683b7058ec44350d2dbf5c55d45c80d2` |
+| T2V current Core candidate, previous run | 640x368, 33 frames, 2.063 s | 1756.39 s | official 50/1/50 preset; sharp coherent fox walk, 33 unique frames | `df443d0e577af8e8ef36bf81b2d694cd683b7058ec44350d2dbf5c55d45c80d2` |
+| T2V current Core candidate, clean reboot rerun | 640x368, 33 frames, 2.063 s | 1024.58 s | Core-only official 50/1/50 preset; coherent fox walk, 33 unique frames | `a24399197728d762cb71826cf5a0ad71513ba48b354f59c69ad6bab51c2c89cb` |
 | V2V | 848x480, 33 frames, 2.0625 s | 3769.25 s | official dog scene and motion preserved; stable snowman added | `853d5ad0cd8d2043184655bde551f6b6320a3c8b3b715c71e973c9a3829895f6` |
 | R2V | 848x480, 33 frames, 2.0625 s | 4080.58 s | all five official references integrated into one stable scene | `c98aafe34bf3ae78e71db9d84cdca2392af623cade9bbda7f4374dc51434a462` |
 | RV2V | 368x640, 33 frames, 2.0625 s | 7133.09 s | reference shirt applied; inner shirt, identity, scene, and motion preserved | `201fdfeb018b709374cad7aa2f601072036dc0721a84e10a8b5cb790437b2557` |
@@ -45,6 +46,13 @@ the model package:
 - <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-640x368-33f.mp4>
 - <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-contact.png>
 - <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-frame16.png>
+
+The no-competing-process clean rerun and its inspection images are published
+separately so the earlier accepted result remains auditable:
+
+- <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-clean-retest-640x368-33f.mp4>
+- <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-clean-retest-contact.png>
+- <https://huggingface.co/t8star/Bernini-V2-Comfy/blob/main/samples/core-pr-t2v-clean-retest-frame16.png>
 
 The external-NVFP4 result and inspection images are also published:
 
@@ -78,6 +86,36 @@ than a claim of pixel parity with the official pipeline.
 - Guidance: image 1.0, text 4.0, VIT target 0.5, post-switch scale 1.0
 - Precision: Qwen/planner, UMT5, both Wan experts, and VAE ran in BF16
 - Text conditioning: official T2I system prefix and standard Wan negative
+
+## Clean Core-only T2V rerun
+
+After a host restart with no competing GPU compute process, Core PR head
+`276afd423942b3ec16349dce47deffccb5e407bc` was checked out in a clean detached
+worktree. ComfyUI ran with all custom nodes disabled and with the validated
+24 GB compatibility flags `--lowvram --reserve-vram 3 --disable-smart-memory`.
+The runtime loaded only the four standalone INT8 files from the standard
+`text_encoders` and `diffusion_models` folders, plus the standard Wan VAE.
+
+The official T2V preset used 50 MaskGIT planning steps, one VIT denoising step,
+50 flow-UniPC renderer steps, seed 42, 640x368 geometry, 33 frames, and 16 fps.
+ComfyUI reported 1,022.798 seconds and the external runner reported 1,024.578
+seconds. Across 492 resource samples, peak ComfyUI-visible VRAM was 16.585 GiB,
+peak process-tree RSS was 49.686 GiB, and peak process-tree VMS/commit was
+82.573 GiB. The high commit peak reflects the two 14.288B renderer experts and
+Windows CPU offload/page-file pressure rather than a device-memory leak.
+
+The resulting H.264 file decodes as 640x368 yuv420p at 16 fps for 2.063 seconds.
+All 33 frame hashes are unique. The fox, snow slope, sunrise, and walking motion
+remain coherent with no frozen duplication, blurred-color collapse, or visible
+quantization noise. Minor leg-gait and tail-root merging remains model output
+quality, not a loader failure. Against the preceding accepted Core result, the
+decoded videos have all-frame SSIM 0.93627 and the same composition and motion.
+
+The preceding successful run took 1,756.39 seconds and peaked at 23.255 GiB of
+ComfyUI-visible VRAM. The clean rerun is 41.7% faster and shows that a four-hour
+unfinished run is abnormal, while also demonstrating that PyTorch 2.7 + CUDA
+12.8 eager/offload performance is sensitive to host process and memory state.
+This remains a compatibility result, not a CUDA 13 optimized-speed claim.
 
 ## Balanced-INT8 T2V acceptance
 
