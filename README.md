@@ -172,7 +172,6 @@ python -m ruff format --check .
 - YouTube: <https://www.youtube.com/@T8star-Aix/>
 - API: <https://api.seedance.nz/sign-up?aff=5f4w>
 - Online AI apps: <https://www.runninghub.ai/zh-cn/user-center/1907375370302308353/userPost?inviteCode=rh-v1121>
-- ComfyUI package: <https://pan.quark.cn/s/264edb7e36bd>
 - Hugging Face: <https://huggingface.co/t8star>
 
 ## License and credits
