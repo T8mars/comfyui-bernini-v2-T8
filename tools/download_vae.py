@@ -7,9 +7,9 @@ import argparse
 import os
 from pathlib import Path
 
-REPO_ID = "Comfy-Org/Wan_2.2_ComfyUI_Repackaged"
-REVISION = "c4f60d30c55a624e35427060fdd217579a6c1d77"
-FILENAME = "split_files/vae/wan_2.1_vae.safetensors"
+REPO_ID = "t8star/Bernini-V2-Comfy"
+REVISION = "00dbbfd2a9d043a7295a4d2efffaa10038c19024"
+FILENAME = "vae/wan_2.1_vae.safetensors"
 
 
 def main() -> None:

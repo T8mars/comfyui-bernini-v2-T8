@@ -8,6 +8,9 @@ projects and model releases:
   behavior.
 - ComfyUI. Runtime modules use ComfyUI model loading, patching, conditioning,
   sampling, Wan, Qwen2.5-VL, T5, and VAE APIs.
+- Wan-AI Wan 2.1 and Comfy-Org's Apache-2.0 ComfyUI repack. The model hub
+  mirrors the unchanged `wan_2.1_vae.safetensors` companion file; its published
+  SHA-256 is `2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b`.
 - `rzgar/Bernini-v2-ComfyUI`. Its Apache-2.0 custom-node implementation was
   reviewed as a low-level interoperability reference. This project does not
   adopt its monolithic pipeline structure or bundled model files.
@@ -17,5 +20,6 @@ projects and model releases:
 - `city96/ComfyUI-GGUF`. GGUF interoperability is an optional standard-`MODEL`
   boundary only; its loader and conversion code are not bundled or required.
 
-Each upstream project retains its own copyright and license notices. Model
-weights are downloaded separately and are not distributed by this repository.
+Each upstream project retains its own copyright and license notices. The node
+source repository does not vendor model weights; required weights are hosted in
+the separately licensed Hugging Face model repository.

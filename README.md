@@ -58,7 +58,16 @@ hf download t8star/Bernini-V2-Comfy `
   --local-dir C:/path/to/ComfyUI/models/bernini_v2
 ```
 
-Bernini v2 使用标准 Wan 2.1 VAE：
+同一模型仓库还提供经过哈希核对的标准 Wan 2.1 VAE。直接下载到
+ComfyUI 的模型根目录：
+
+```powershell
+hf download t8star/Bernini-V2-Comfy `
+  --include "vae/wan_2.1_vae.safetensors" `
+  --local-dir C:/path/to/ComfyUI/models
+```
+
+也可以使用仓库内固定版本的下载脚本：
 
 ```powershell
 python tools/download_vae.py --output C:/path/to/ComfyUI/models/vae
@@ -144,7 +153,16 @@ hf download t8star/Bernini-V2-Comfy `
 ```
 
 The 83.03 GiB BF16 package is available from the same repository under
-`Bernini-v2-bf16-native/`. Download the standard Wan 2.1 VAE with
+`Bernini-v2-bf16-native/`. The same repository now includes the verified Wan
+2.1 VAE companion file. Download it directly into the ComfyUI model root:
+
+```powershell
+hf download t8star/Bernini-V2-Comfy `
+  --include "vae/wan_2.1_vae.safetensors" `
+  --local-dir C:/path/to/ComfyUI/models
+```
+
+Alternatively run
 `python tools/download_vae.py --output C:/path/to/ComfyUI/models/vae`.
 
 Open a workflow from [`examples/workflows`](examples/workflows). Video examples

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2 - 2026-09-01
+
+- Remove the obsolete external package mirror from the published node package.
+- Publish the pinned Wan 2.1 VAE companion weight alongside the Bernini
+  packages on Hugging Face so all required downloads come from one repository.
+- Point the VAE downloader and installation guide at the verified companion
+  file without changing model or runtime behavior.
+
 ## 0.2.1 - 2026-09-01
 
 - Accept the full 64-bit ComfyUI seed range in MaskGIT planning.
