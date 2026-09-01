@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1 - 2026-09-02
+
+- Keep the standalone-weight runtime from 0.3.0 unchanged while removing all
+  repository-only download, conversion, quantization, workflow-generation,
+  and regression tools from the Comfy Registry installation archive.
+- Remove unused sharded-index/manifest conversion modules from the Registry
+  archive and stop importing conversion helpers during runtime package init.
+- Retain those developer tools in the GitHub source repository so weight
+  maintainers can still reproduce and validate the published single files.
+
 ## 0.3.0 - 2026-09-01
 
 - Replace the runtime sharded-package/index/manifest contract with four
