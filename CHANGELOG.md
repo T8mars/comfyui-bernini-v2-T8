@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2 - 2026-09-02
+
+- Align the renderer loader's API fallback with its BF16 schema default and
+  mark task-preset-controlled guider/scheduler inputs as advanced.
+- Allocate planner MRoPE positions directly on the input device and reject
+  invalid flow sigma schedules before they can produce NaN latents.
+- Preserve the released ByteDance planner CFG branch/scale mapping explicitly.
+
 ## 0.3.1 - 2026-09-02
 
 - Keep the standalone-weight runtime from 0.3.0 unchanged while removing all

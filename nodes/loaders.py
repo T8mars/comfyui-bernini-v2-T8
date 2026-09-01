@@ -66,7 +66,7 @@ class BerniniV2WanLoader(io.ComfyNode):
         cls,
         unet_name: str,
         flow_shift: float = 5.0,
-        weight_dtype: str = "default",
+        weight_dtype: str = "bfloat16",
     ) -> io.NodeOutput:
         model_path = folder_paths.get_full_path_or_raise("diffusion_models", unet_name)
         if not model_path.endswith(".safetensors"):

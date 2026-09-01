@@ -403,6 +403,8 @@ def create_plan(
         decoder_condition = torch.cat([value[:, indices, :] for value in predicted], dim=1)[0]
         current = runtime.aux.vit_decoder.sample(
             decoder_condition,
+            # Upstream's ``imgcond`` branch is text-only, but the released
+            # pipeline intentionally applies these scale names in this order.
             cfg=vit_text_cfg,
             img_cfg=vit_image_cfg,
             num_inference_steps=vit_denoising_steps,
