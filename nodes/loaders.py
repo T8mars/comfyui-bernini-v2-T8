@@ -1,9 +1,8 @@
-"""Native sharded Wan loader for Bernini v2 repacks."""
+"""Native single-file model loaders for Bernini v2."""
 
 from __future__ import annotations
 
 import logging
-import os
 
 import comfy.model_sampling
 import comfy.ops
@@ -14,16 +13,8 @@ import torch
 from comfy_api.latest import ComfyExtension, io
 from typing_extensions import override
 
-from ..bernini_v2.manifest import load_repack_manifest
-from ..bernini_v2.runtime import load_planner_runtime, load_wan_t5
-from ..bernini_v2.sharded import load_checkpoint_state_dict
+from ..bernini_v2.runtime import load_planner_runtime
 
-MODEL_FOLDER = "bernini_v2"
-MODEL_ROOT = os.path.join(folder_paths.models_dir, MODEL_FOLDER)
-folder_paths.add_model_folder_path(MODEL_FOLDER, MODEL_ROOT, is_default=True)
-# This folder is index-oriented, not a generic PyTorch checkpoint directory.
-folder_paths.folder_names_and_paths[MODEL_FOLDER][1].add(".json")
-folder_paths.folder_names_and_paths[MODEL_FOLDER][1].add(".safetensors")
 BerniniV2PlannerType = io.Custom("BERNINI_V2_PLANNER")
 
 
@@ -32,34 +23,12 @@ def _portable_name(name: str) -> str:
     return name.replace("\\", "/")
 
 
-def _index_options() -> list[str]:
-    return [
-        _portable_name(name)
-        for name in folder_paths.get_filename_list(MODEL_FOLDER)
-        if (
-            name.endswith("model.safetensors.index.json")
-            or (name.endswith(".safetensors") and not (os.path.basename(name).startswith("model-") and "-of-" in name))
-        )
-        and any(part in name.replace("\\", "/").split("/") for part in ("wan_high", "wan_low"))
-    ]
-
-
-def _manifest_options() -> list[str]:
-    return [
-        _portable_name(name)
-        for name in folder_paths.get_filename_list(MODEL_FOLDER)
-        if name.endswith("repack-manifest.json")
-    ]
-
-
-def _repack_root(manifest_name: str) -> str:
-    manifest_path = folder_paths.get_full_path_or_raise(MODEL_FOLDER, manifest_name)
-    load_repack_manifest(manifest_path)
-    return os.path.dirname(manifest_path)
+def _model_options(folder: str) -> list[str]:
+    return [_portable_name(name) for name in folder_paths.get_filename_list(folder)]
 
 
 class BerniniV2WanLoader(io.ComfyNode):
-    """Load a repacked high- or low-noise renderer with Comfy's Wan model."""
+    """Load one high- or low-noise renderer with Comfy's Wan model."""
 
     @classmethod
     def define_schema(cls):
@@ -68,11 +37,11 @@ class BerniniV2WanLoader(io.ComfyNode):
             display_name="Load Bernini v2 Wan Renderer",
             category="advanced/loaders/bernini_v2",
             description=(
-                "Loads a sharded native-Comfy Wan renderer produced by tools/repack_diffusers.py. "
+                "Loads one native-Comfy Wan safetensors renderer from models/diffusion_models. "
                 "The output is a standard MODEL and uses ComfyUI device/offload management."
             ),
             inputs=[
-                io.Combo.Input("model_index", options=_index_options()),
+                io.Combo.Input("unet_name", options=_model_options("diffusion_models")),
                 io.Float.Input(
                     "flow_shift",
                     default=5.0,
@@ -95,12 +64,14 @@ class BerniniV2WanLoader(io.ComfyNode):
     @classmethod
     def execute(
         cls,
-        model_index: str,
+        unet_name: str,
         flow_shift: float = 5.0,
         weight_dtype: str = "default",
     ) -> io.NodeOutput:
-        index_path = folder_paths.get_full_path_or_raise(MODEL_FOLDER, model_index)
-        state_dict = load_checkpoint_state_dict(index_path)
+        model_path = folder_paths.get_full_path_or_raise("diffusion_models", unet_name)
+        if not model_path.endswith(".safetensors"):
+            raise ValueError("Bernini v2 Core-compatible renderers must be one .safetensors file")
+        state_dict = comfy.utils.load_torch_file(model_path, safe_load=True)
         if "scaled_fp8" in state_dict:
             state_dict, _ = comfy.utils.convert_old_quants(state_dict)
         native_quant = any(key.endswith(".comfy_quant") for key in state_dict)
@@ -125,7 +96,7 @@ class BerniniV2WanLoader(io.ComfyNode):
             logging.info("Bernini v2 quantized renderer compute dtype: %s", compute_dtype)
         model = comfy.sd.load_diffusion_model_state_dict(state_dict, model_options=model_options)
         if model is None:
-            raise RuntimeError(f"ComfyUI could not detect the Wan model in {index_path}")
+            raise RuntimeError(f"ComfyUI could not detect the Wan model in {model_path}")
         model = model.clone()
 
         class BerniniV2ModelSampling(comfy.model_sampling.ModelSamplingDiscreteFlow, comfy.model_sampling.CONST):
@@ -147,11 +118,11 @@ class BerniniV2PlannerLoader(io.ComfyNode):
             display_name="Load Bernini v2 Planner",
             category="advanced/loaders/bernini_v2",
             description=(
-                "Loads native Comfy Qwen language/vision modules plus the Bernini connector and VIT decoder. "
-                "The three parts remain independently offloadable."
+                "Loads one standalone planner from models/text_encoders. It contains Qwen language/vision, "
+                "the Bernini connector and VIT decoder, mask tokens, model config, and tokenizer."
             ),
             inputs=[
-                io.Combo.Input("repack_manifest", options=_manifest_options()),
+                io.Combo.Input("planner_name", options=_model_options("text_encoders")),
                 io.Combo.Input(
                     "dtype",
                     options=["bfloat16", "float16"],
@@ -164,41 +135,16 @@ class BerniniV2PlannerLoader(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, repack_manifest: str, dtype: str = "bfloat16") -> io.NodeOutput:
+    def execute(cls, planner_name: str, dtype: str = "bfloat16") -> io.NodeOutput:
         torch_dtype = torch.bfloat16 if dtype == "bfloat16" else torch.float16
-        planner = load_planner_runtime(_repack_root(repack_manifest), dtype=torch_dtype)
+        planner_path = folder_paths.get_full_path_or_raise("text_encoders", planner_name)
+        if not planner_path.endswith(".safetensors"):
+            raise ValueError("Bernini v2 Core-compatible planners must be one .safetensors file")
+        planner = load_planner_runtime(planner_path, dtype=torch_dtype)
         return io.NodeOutput(planner)
-
-
-class BerniniV2T5Loader(io.ComfyNode):
-    """Load Bernini's official UMT5-XXL as a standard Comfy CLIP object."""
-
-    @classmethod
-    def define_schema(cls):
-        return io.Schema(
-            node_id="BerniniV2T5Loader",
-            display_name="Load Bernini v2 T5",
-            category="advanced/loaders/bernini_v2",
-            inputs=[
-                io.Combo.Input("repack_manifest", options=_manifest_options()),
-                io.Combo.Input(
-                    "dtype",
-                    options=["bfloat16", "float16"],
-                    default="bfloat16",
-                    optional=True,
-                    advanced=True,
-                ),
-            ],
-            outputs=[io.Clip.Output()],
-        )
-
-    @classmethod
-    def execute(cls, repack_manifest: str, dtype: str = "bfloat16") -> io.NodeOutput:
-        torch_dtype = torch.bfloat16 if dtype == "bfloat16" else torch.float16
-        return io.NodeOutput(load_wan_t5(_repack_root(repack_manifest), dtype=torch_dtype))
 
 
 class BerniniV2LoaderExtension(ComfyExtension):
     @override
     async def get_node_list(self) -> list[type[io.ComfyNode]]:
-        return [BerniniV2WanLoader, BerniniV2PlannerLoader, BerniniV2T5Loader]
+        return [BerniniV2WanLoader, BerniniV2PlannerLoader]

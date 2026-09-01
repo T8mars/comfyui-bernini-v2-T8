@@ -1,9 +1,10 @@
 # ComfyUI Core merge plan
 
-The native Core implementation is now under review in
-[ComfyUI PR #16001](https://github.com/Comfy-Org/ComfyUI/pull/16001). The
-sections below record its implementation shape, validation evidence, and known
-follow-up work.
+The standalone-model Core implementation is under review in
+[ComfyUI PR #16019](https://github.com/Comfy-Org/ComfyUI/pull/16019). It
+supersedes and closes the earlier sharded-package proposal in
+[#16001](https://github.com/Comfy-Org/ComfyUI/pull/16001). The sections below
+record its implementation shape, validation evidence, and known follow-up work.
 
 This repository is deliberately structured as a proving ground, not as the
 final Core diff. The model runs through Comfy model patchers, the native Wan
@@ -12,11 +13,14 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
 
 ## Proposed upstream slices
 
-1. **Model plumbing and fixtures**
-   - Add Bernini v2 Diffusers-to-Comfy key detection/mapping fixtures.
-   - Reuse the existing Wan `context_latents` and source-id RoPE path introduced
-     for Bernini-R; avoid a second Wan implementation.
-   - Add tiny/meta state-dict tests for both high- and low-noise experts.
+1. **Single-file model plumbing**
+   - Load one self-contained Planner safetensors from `models/text_encoders`.
+   - Load each native Wan expert from one safetensors file in
+     `models/diffusion_models`; reuse the existing Wan implementation.
+   - Reuse Core `CLIPLoader(type=wan)` for the standalone UMT5 file and the
+     existing VAE loader for Wan 2.1 VAE.
+   - Do not add a Diffusers directory, runtime manifest, shard index, or custom
+     model folder to Core.
 
 2. **Planner modules**
    - Add the Qwen2.5-VL additive-mask inference path, connector, mask tokens,
@@ -36,8 +40,8 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
 
 4. **Examples and documentation**
    - Supply workflows for `t2i`, `i2i`, `t2v`, `v2v`, `r2v`, and `rv2v`.
-   - Document official task presets, model placement, memory expectations, and
-     the raw-checkpoint repack step.
+   - Document official task presets, standard model placement, and memory
+     expectations.
 
 ## Submission status and review gates
 
@@ -60,22 +64,24 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
   640x368/33-frame jobs in one process and returns host and device memory to
   baseline. Repeat BF16, current-CUDA/Linux lifecycle, interrupted download,
   and interrupted repack paths still need dedicated tests.
-- Code is rebased onto current ComfyUI and submitted as one self-contained
-  review commit.
+- Code is based on current ComfyUI master and submitted as one self-contained
+  review commit. The focused Core suite passes 18 tests and Ruff; real INT8
+  Planner, Core Wan UMT5, and both 14.288B Wan standalone files load without
+  missing or meta parameters. PR CI remains authoritative.
 
 ## Known upstream-facing compatibility items
 
 - ComfyUI's shared Qwen vision RoPE previously computed Q/K in FP32 without
-  restoring their original dtype before SDPA. PR #16001 restores the input
+  restoring their original dtype before SDPA. PR #16019 restores the input
   dtypes in the shared implementation, so the Core port needs no private bridge.
 - PyTorch 2.7 on the verified Windows host uses Comfy's legacy ModelPatcher.
   Repeat lifecycle and memory tests on the current supported PyTorch/CUDA stack.
   The compatibility lane now has balanced-INT8 repeat evidence plus a
   production-step T2V quality pass, but that does not replace the upstream lane.
 - The original `Bernini-v2-bf16` directory was actually FP32 and occupied about
-  166 GiB. It is not a valid BF16 memory baseline. The corrected BF16 package is
-  83.03 GiB, and the architecture-aware balanced INT8 ConvRot package is
-  45.62 GiB. Core submission still needs repeat-prompt lifecycle evidence for
+  166 GiB. It is not a valid BF16 memory baseline. The corrected BF16 standalone
+  set is 83.04 GiB, and the architecture-aware balanced INT8 ConvRot set is
+  45.63 GiB. Core submission still needs repeat-prompt lifecycle evidence for
   both packages on current ComfyUI.
 - Combined RV2V VAE streams must remain in reference-image-then-source-video
   order. Wan source ids and RoPE depend on stream position; reversing them
@@ -86,5 +92,5 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
   GB development hosts can exercise the complete path. The distinction must be
   called out when preparing an upstream diff.
 
-PR #16001 is the authoritative upstream review. Further changes should respond
+PR #16019 is the authoritative upstream review. Further changes should respond
 to review or CI evidence there instead of reopening a parallel implementation.

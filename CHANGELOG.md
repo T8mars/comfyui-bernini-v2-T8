@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-09-01
+
+- Replace the runtime sharded-package/index/manifest contract with four
+  Core-compatible standalone safetensors files in ComfyUI's standard
+  `text_encoders` and `diffusion_models` directories.
+- Embed the exact Qwen model config and tokenizer in the planner file and the
+  official SentencePiece model in UMT5; use Core `CLIPLoader(type=wan)` for T5.
+- Add a bounded-memory byte-preserving exporter and full standalone contract
+  validator, and migrate all six API/frontend workflows to the single-file
+  inputs.
 
 ## 0.2.3 - 2026-09-01
 
@@ -67,7 +76,7 @@
 ### Fixed
 
 - Corrected the old `Bernini-v2-bf16` memory claim: it contained FP32 storage
-  and occupied about 166 GiB. The validated BF16 package is 83.03 GiB.
+  and occupied about 166 GiB. The validated BF16 standalone set is 83.04 GiB.
 - Prevented quantized planner modules from being initialized on `meta`, which
   discarded quantization hooks during assign-loading.
 - Upgraded legacy `scaled_fp8/.scale_weight` checkpoints through Comfy's own

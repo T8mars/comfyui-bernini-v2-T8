@@ -8,7 +8,7 @@ Wan 渲染器，因此可以正常卸载模型、使用低显存模式，并接�
 
 支持 `t2i`、`i2i`、`t2v`、`v2v`、`r2v` 和 `rv2v` 六种任务。
 
-> 推荐下载 Balanced INT8 权重：约 45.62 GiB。完整 BF16 版本约 83.03 GiB。
+> 推荐下载 Balanced INT8 权重：约 45.63 GiB。完整 BF16 版本约 83.04 GiB。
 > 实验性 GGUF Q4_K_S 双 renderer 合计 16.31 GiB，画质略低且需要 ComfyUI-GGUF。
 
 ## 中文
@@ -23,6 +23,8 @@ Bernini v2 会先用 Qwen2.5-VL 规划画面和动作，再交给 Wan2.2 双专�
 - 原生 ComfyUI 节点，不依赖 Diffusers 运行时。
 - 六种官方任务和可直接打开的示例工作流。
 - 自动低显存调度、顺序 CFG/APG 和双专家切换。
+- Core 风格的单体 safetensors：Planner、UMT5、高噪声 Wan、低噪声 Wan
+  各一个文件，不需要 Diffusers 目录、分片索引或 manifest。
 - BF16 与原生 ComfyUI INT8 ConvRot 权重。
 - 可识别 NVFP4、现代/旧版 scaled FP8；GGUF 通过外部 ComfyUI-GGUF
   接入两个 Wan renderer，Planner 仍使用原生权重。
@@ -48,16 +50,16 @@ git clone https://github.com/T8mars/comfyui-bernini-v2-T8.git
 
 ```powershell
 hf download t8star/Bernini-V2-Comfy `
-  --include "Bernini-v2-balanced-int8/*" `
-  --local-dir C:/path/to/ComfyUI/models/bernini_v2
+  --include "text_encoders/*_int8.safetensors" "diffusion_models/*_int8.safetensors" "vae/wan_2.1_vae.safetensors" `
+  --local-dir C:/path/to/ComfyUI/models
 ```
 
 BF16 参考版本：
 
 ```powershell
 hf download t8star/Bernini-V2-Comfy `
-  --include "Bernini-v2-bf16-native/*" `
-  --local-dir C:/path/to/ComfyUI/models/bernini_v2
+  --include "text_encoders/*_bf16.safetensors" "diffusion_models/*_bf16.safetensors" "vae/wan_2.1_vae.safetensors" `
+  --local-dir C:/path/to/ComfyUI/models
 ```
 
 实验性 Q4_K_S GGUF（先安装
@@ -88,13 +90,12 @@ python tools/download_vae.py --output C:/path/to/ComfyUI/models/vae
 
 ```text
 ComfyUI/models/
-├── bernini_v2/
-│   └── Bernini-v2-balanced-int8/
-│       ├── repack-manifest.json
-│       ├── mllm/
-│       ├── vit_decoder/
-│       ├── wan_high/
-│       └── wan_low/
+├── text_encoders/
+│   ├── bernini_v2_planner_int8.safetensors
+│   └── umt5_xxl_bernini_v2_int8.safetensors
+├── diffusion_models/
+│   ├── bernini_v2_high_noise_int8.safetensors
+│   └── bernini_v2_low_noise_int8.safetensors
 └── vae/
     └── wan_2.1_vae.safetensors
 ```
@@ -120,7 +121,8 @@ ComfyUI/models/
 [`docs/LOW_MEMORY_WEIGHTS.md`](docs/LOW_MEMORY_WEIGHTS.md)。
 
 原生 Core 实现已提交到
-[ComfyUI PR #16001](https://github.com/Comfy-Org/ComfyUI/pull/16001)。
+[ComfyUI PR #16019](https://github.com/Comfy-Org/ComfyUI/pull/16019)。旧的分片方案
+[#16001](https://github.com/Comfy-Org/ComfyUI/pull/16001) 已关闭。
 
 ### 自己转换权重
 
@@ -138,9 +140,14 @@ python tools/quantize_repack.py `
   --source C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-bf16-native `
   --output C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-balanced-int8 `
   --profile balanced --device cuda
+python tools/export_single_files.py `
+  --source C:/path/to/ComfyUI/models/bernini_v2/Bernini-v2-balanced-int8 `
+  --output C:/path/to/Bernini-v2-single-int8 `
+  --profile int8
 ```
 
-转换支持断点续跑；`validate_repack.py` 会检查索引、键、dtype、量化标记和 SHA-256。
+前两步产生仅供转换使用的分片工作区；最后一步才生成用户安装的四个单体文件。
+`validate_single_files.py` 会检查单文件合同、键、dtype、量化标记、tokenizer 和双专家一致性。
 GGUF 的分片转换、量化和验证命令见
 [`docs/LOW_MEMORY_WEIGHTS.md`](docs/LOW_MEMORY_WEIGHTS.md)。
 
@@ -162,17 +169,19 @@ Install [`Bernini v2 (Native)`](https://registry.comfy.org/nodes/bernini-v2-t8)
 from ComfyUI-Manager, or clone this repository into `ComfyUI/custom_nodes`,
 then restart ComfyUI.
 
-Download the recommended 45.62 GiB Balanced INT8 package:
+Download the recommended 45.63 GiB Balanced INT8 standalone files directly
+into the standard ComfyUI model folders:
 
 ```powershell
 hf download t8star/Bernini-V2-Comfy `
-  --include "Bernini-v2-balanced-int8/*" `
-  --local-dir C:/path/to/ComfyUI/models/bernini_v2
+  --include "text_encoders/*_int8.safetensors" "diffusion_models/*_int8.safetensors" "vae/wan_2.1_vae.safetensors" `
+  --local-dir C:/path/to/ComfyUI/models
 ```
 
-The 83.03 GiB BF16 package is available from the same repository under
-`Bernini-v2-bf16-native/`. The same repository now includes the verified Wan
-2.1 VAE companion file. Download it directly into the ComfyUI model root:
+The 83.04 GiB BF16 files use the `_bf16.safetensors` suffix in the same
+`text_encoders/` and `diffusion_models/` folders. Each component is one file;
+there is no Diffusers directory, shard index, or repack manifest. The same
+repository includes the verified Wan 2.1 VAE companion file:
 
 ```powershell
 hf download t8star/Bernini-V2-Comfy `
@@ -201,7 +210,7 @@ be tested on a 24 GB GPU.
 
 The implementation is covered by unit, workflow, real-weight quality, memory,
 and repeat-run tests. The native Core implementation is submitted as
-[ComfyUI PR #16001](https://github.com/Comfy-Org/ComfyUI/pull/16001), closing
+[ComfyUI PR #16019](https://github.com/Comfy-Org/ComfyUI/pull/16019), closing
 [issue #15702](https://github.com/Comfy-Org/ComfyUI/issues/15702). Review notes
 live in
 [`docs/CORE_MERGE_PLAN.md`](docs/CORE_MERGE_PLAN.md).

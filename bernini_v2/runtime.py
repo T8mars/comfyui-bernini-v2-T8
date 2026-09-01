@@ -11,10 +11,12 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+from safetensors.torch import load_file
 
 from .planner_model import DiffLossFM, MLPConnector
 from .qwen import install_qwen_vision_dtype_compat
-from .sharded import component_checkpoint, load_checkpoint_state_dict
+
+EMBEDDED_PLANNER_TENSORS = {"config_json", "tokenizer_json", "tokenizer_config"}
 
 
 class PlannerAux(nn.Module):
@@ -93,15 +95,6 @@ def _load_assign(module: nn.Module, state_dict: dict[str, torch.Tensor], label: 
         )
 
 
-def _component_state(root: Path, component: str) -> dict[str, torch.Tensor]:
-    state_dict = load_checkpoint_state_dict(component_checkpoint(root, component))
-    if "scaled_fp8" in state_dict:
-        import comfy.utils
-
-        state_dict, _ = comfy.utils.convert_old_quants(state_dict)
-    return state_dict
-
-
 def _uses_native_quant(state_dict: dict[str, torch.Tensor]) -> bool:
     return any(key.endswith(".comfy_quant") for key in state_dict)
 
@@ -112,34 +105,69 @@ def _module_init_device(state_dict: dict[str, torch.Tensor], offload_device: tor
     return offload_device if _uses_native_quant(state_dict) else "meta"
 
 
-def _qwen_config(config_path: Path) -> dict[str, object]:
+def _embedded_bytes(state_dict: dict[str, torch.Tensor], key: str) -> bytes:
+    try:
+        tensor = state_dict.pop(key)
+    except KeyError as error:
+        raise ValueError(f"standalone planner is missing embedded tensor {key!r}") from error
+    if tensor.dtype != torch.uint8 or tensor.ndim != 1:
+        raise ValueError(f"embedded tensor {key!r} must be a one-dimensional U8 tensor")
+    return tensor.contiguous().cpu().numpy().tobytes()
+
+
+def _embedded_json(state_dict: dict[str, torch.Tensor], key: str) -> dict[str, object]:
+    try:
+        payload = json.loads(_embedded_bytes(state_dict, key).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"embedded tensor {key!r} is not valid UTF-8 JSON") from error
+    if not isinstance(payload, dict):
+        raise ValueError(f"embedded tensor {key!r} must contain a JSON object")
+    return payload
+
+
+def _qwen_config(payload: dict[str, object]) -> dict[str, object]:
     from comfy.text_encoders.llama import Qwen25_7BVLI_Config
 
-    payload = json.loads(config_path.read_text(encoding="utf-8"))
     allowed = {field.name for field in dataclasses.fields(Qwen25_7BVLI_Config)}
     return {key: value for key, value in payload.items() if key in allowed}
 
 
-def load_planner_runtime(root: str | Path, *, dtype: torch.dtype = torch.bfloat16) -> BerniniV2PlannerRuntime:
-    """Load native Qwen/VIT planner weights from a streamed repack directory."""
+def _build_qwen_tokenizer(tokenizer_json: bytes, tokenizer_config: dict[str, object]):
+    from tokenizers import Tokenizer
+    from transformers import Qwen2TokenizerFast
+
+    kwargs = dict(tokenizer_config)
+    kwargs.pop("tokenizer_class", None)
+    kwargs.pop("added_tokens_decoder", None)
+    return Qwen2TokenizerFast(
+        tokenizer_object=Tokenizer.from_str(tokenizer_json.decode("utf-8")),
+        **kwargs,
+    )
+
+
+def load_planner_runtime(checkpoint: str | Path, *, dtype: torch.dtype = torch.bfloat16) -> BerniniV2PlannerRuntime:
+    """Load the complete Bernini planner from one standalone safetensors file."""
 
     import comfy.model_management
     import comfy.ops
     from comfy.model_patcher import CoreModelPatcher
     from comfy.text_encoders.llama import Llama2_, Qwen25_7BVLI_Config
     from comfy.text_encoders.qwen_vl import Qwen2VLVisionTransformer
-    from transformers import AutoTokenizer
 
-    root = Path(root).resolve()
-    config_path = root / "mllm" / "config.json"
-    if not config_path.is_file():
-        raise FileNotFoundError(
-            f"{config_path} is missing; rerun tools/repack_diffusers.py so tokenizer metadata is copied"
-        )
+    checkpoint = Path(checkpoint).resolve()
+    if checkpoint.suffix != ".safetensors" or not checkpoint.is_file():
+        raise FileNotFoundError(f"expected a standalone planner safetensors file: {checkpoint}")
+    state_dict = load_file(str(checkpoint), device="cpu")
+    raw_config = _embedded_json(state_dict, "config_json")
+    tokenizer_json = _embedded_bytes(state_dict, "tokenizer_json")
+    tokenizer_config = _embedded_json(state_dict, "tokenizer_config")
+    if "scaled_fp8" in state_dict:
+        import comfy.utils
 
-    config = _qwen_config(config_path)
+        state_dict, _ = comfy.utils.convert_old_quants(state_dict)
+
+    config = _qwen_config(raw_config)
     config_obj = Qwen25_7BVLI_Config(**config)
-    raw_config = json.loads(config_path.read_text(encoding="utf-8"))
     rope_dims = raw_config.get("rope_scaling", {}).get("mrope_section")
     if rope_dims is not None and list(rope_dims) != list(config_obj.rope_dims):
         raise ValueError(
@@ -147,7 +175,19 @@ def load_planner_runtime(root: str | Path, *, dtype: torch.dtype = torch.bfloat1
         )
     load_device = comfy.model_management.get_torch_device()
     offload_device = comfy.model_management.text_encoder_offload_device()
-    mllm_state = _component_state(root, "mllm")
+    mllm_state = {key: value for key, value in state_dict.items() if key.startswith(("model.", "visual."))}
+    aux_state = {
+        key: value
+        for key, value in state_dict.items()
+        if key == "mask_tokens" or key.startswith(("connector.", "vit_decoder."))
+    }
+    recognized = set(mllm_state) | set(aux_state)
+    unexpected = sorted(set(state_dict) - recognized)
+    if unexpected:
+        raise ValueError(f"standalone planner contains unexpected tensors: {unexpected[:12]}")
+    if not mllm_state or not aux_state:
+        raise ValueError("standalone planner is missing Qwen or Bernini auxiliary weights")
+    del state_dict
     mllm_quantized = _uses_native_quant(mllm_state)
     operations = comfy.ops.mixed_precision_ops({}, dtype) if mllm_quantized else comfy.ops.manual_cast
     init_device = _module_init_device(mllm_state, offload_device)
@@ -177,23 +217,17 @@ def load_planner_runtime(root: str | Path, *, dtype: torch.dtype = torch.bfloat1
     _load_assign(vision_model, vision_state, "Qwen vision model")
     del language_state, vision_state, mllm_state
 
-    aux_state = {}
-    connector_state = _component_state(root, "connector")
-    aux_state.update({f"connector.{key}": value for key, value in connector_state.items()})
-    decoder_state = _component_state(root, "vit_decoder")
-    aux_state.update({f"vit_decoder.{key}": value for key, value in decoder_state.items()})
-    aux_state.update(_component_state(root, "mask_tokens"))
     aux_quantized = _uses_native_quant(aux_state)
     aux_operations = comfy.ops.mixed_precision_ops({}, dtype) if aux_quantized else comfy.ops.manual_cast
     aux_init_device = _module_init_device(aux_state, offload_device)
     aux = PlannerAux(device=aux_init_device, dtype=dtype, operations=aux_operations)
     _load_assign(aux, aux_state, "Bernini planner auxiliary")
-    del connector_state, decoder_state, aux_state
+    del aux_state
 
     language_patcher = CoreModelPatcher(language_model, load_device=load_device, offload_device=offload_device)
     vision_patcher = CoreModelPatcher(vision_model, load_device=load_device, offload_device=offload_device)
     aux_patcher = CoreModelPatcher(aux, load_device=load_device, offload_device=offload_device)
-    tokenizer = AutoTokenizer.from_pretrained(root / "mllm", local_files_only=True, use_fast=True)
+    tokenizer = _build_qwen_tokenizer(tokenizer_json, tokenizer_config)
     return BerniniV2PlannerRuntime(
         language_model=language_model,
         vision_model=vision_model,
@@ -207,20 +241,14 @@ def load_planner_runtime(root: str | Path, *, dtype: torch.dtype = torch.bfloat1
     )
 
 
-def load_wan_t5(root: str | Path, *, dtype: torch.dtype = torch.bfloat16):
-    """Load the official UMT5-XXL weights as a standard Comfy ``CLIP``."""
+def load_wan_t5(checkpoint: str | Path, *, dtype: torch.dtype = torch.bfloat16):
+    """Load one standalone UMT5 file as a standard Comfy ``CLIP``."""
 
     import comfy.sd
 
-    root = Path(root).resolve()
-    state_dict = _component_state(root, "t5_text_encoder")
-    tokenizer_path = root / "t5_tokenizer" / "spiece.model"
-    if not tokenizer_path.is_file():
-        raise FileNotFoundError(tokenizer_path)
-    state_dict["spiece_model"] = torch.frombuffer(bytearray(tokenizer_path.read_bytes()), dtype=torch.uint8)
-    return comfy.sd.load_text_encoder_state_dicts(
-        [state_dict],
+    checkpoint = Path(checkpoint).resolve()
+    return comfy.sd.load_clip(
+        ckpt_paths=[str(checkpoint)],
         clip_type=comfy.sd.CLIPType.WAN,
         model_options={"dtype": dtype},
-        disable_dynamic=False,
     )

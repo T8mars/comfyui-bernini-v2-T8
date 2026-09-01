@@ -14,7 +14,7 @@ The MP4 container hashes differ because the embedded workflow/output prefix
 differs. Independent `framemd5` checks are identical for all 33 decoded frames.
 Both files report H.264, 640x368, 16 fps, and 2.0625 seconds through `ffprobe`.
 
-This used the 45.62 GiB balanced package with 1,300 stock-Comfy
+This used the 45.63 GiB balanced weights with 1,300 stock-Comfy
 `int8_tensorwise` + ConvRot layers, BF16 compute, sequential guidance arms, and
 the same running server. Observed peak use was about 22.3 GiB VRAM while at
 least 33 GiB of 64 GB host RAM remained free. After run 2, ComfyUI returned to
@@ -39,7 +39,7 @@ Face revision
 `399cf6a18a4c523b367b2b1ac25a2a61009e7df3`. The repack validator checked all
 seven component indexes, 62 shards, 3314 runtime tensors, and 166.08 GiB of
 indexed tensor data. That directory was later proved to contain FP32 storage,
-not BF16, and is superseded by the 83.03 GiB true-BF16 and 45.62 GiB balanced
+not BF16, and is superseded by the 83.04 GiB true-BF16 and 45.63 GiB balanced
 INT8 packages. Both Wan experts still map exactly to 1095 native Comfy keys
 before quantization side tensors are added.
 

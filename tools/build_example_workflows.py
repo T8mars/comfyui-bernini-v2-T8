@@ -13,10 +13,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-REPACK_ROOT = "Bernini-v2-balanced-int8"
-MANIFEST = f"{REPACK_ROOT}/repack-manifest.json"
-HIGH_INDEX = f"{REPACK_ROOT}/wan_high/model.safetensors.index.json"
-LOW_INDEX = f"{REPACK_ROOT}/wan_low/model.safetensors.index.json"
+PLANNER_NAME = "bernini_v2_planner_int8.safetensors"
+T5_NAME = "umt5_xxl_bernini_v2_int8.safetensors"
+HIGH_NAME = "bernini_v2_high_noise_int8.safetensors"
+LOW_NAME = "bernini_v2_low_noise_int8.safetensors"
 VAE_NAME = "wan_2.1_vae.safetensors"
 DEFAULT_PROMPT = {
     "t2i": "A cinematic photograph of a red fox standing in fresh snow at sunrise.",
@@ -65,26 +65,27 @@ def build_workflow(task: str) -> Graph:
     t5_prompt = SYSTEM_PROMPT[task] + prompt
     is_image = task in {"t2i", "i2i"}
     graph: Graph = {
-        "1": _node("BerniniV2PlannerLoader", "Load Bernini v2 Planner", repack_manifest=MANIFEST, dtype="bfloat16"),
+        "1": _node("BerniniV2PlannerLoader", "Load Bernini v2 Planner", planner_name=PLANNER_NAME, dtype="bfloat16"),
         "2": _node(
-            "BerniniV2T5Loader",
+            "CLIPLoader",
             "Load Bernini v2 T5",
-            repack_manifest=MANIFEST,
-            dtype="bfloat16",
+            clip_name=T5_NAME,
+            type="wan",
+            device="default",
         ),
         "3": _node("CLIPTextEncode", "Positive UMT5", text=t5_prompt, clip=["2", 0]),
         "4": _node("CLIPTextEncode", "Negative UMT5", text=negative, clip=["2", 0]),
         "5": _node(
             "BerniniV2WanLoader",
             "Load High-noise Renderer",
-            model_index=HIGH_INDEX,
+            unet_name=HIGH_NAME,
             flow_shift=5.0,
             weight_dtype="bfloat16",
         ),
         "6": _node(
             "BerniniV2WanLoader",
             "Load Low-noise Renderer",
-            model_index=LOW_INDEX,
+            unet_name=LOW_NAME,
             flow_shift=5.0,
             weight_dtype="bfloat16",
         ),

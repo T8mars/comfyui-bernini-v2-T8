@@ -22,7 +22,8 @@ def test_frontend_workflow_is_connected_and_task_specific(task):
 def test_t2i_frontend_uses_quality_defaults():
     workflow = build_frontend_workflow("t2i")
     nodes = {node["id"]: node for node in workflow["nodes"]}
-    assert nodes[2]["widgets_values"][1] == "bfloat16"
+    assert nodes[2]["type"] == "CLIPLoader"
+    assert nodes[2]["widgets_values"][1:] == ["wan", "default"]
     assert nodes[3]["widgets_values"][0] == SYSTEM_PROMPT["t2i"] + DEFAULT_PROMPT["t2i"]
     assert nodes[4]["widgets_values"][0] == OFFICIAL_DEFAULT_NEGATIVE
     assert nodes[5]["widgets_values"][-1] == "bfloat16"

@@ -85,7 +85,8 @@ def prepare_graph(
     source_video: str = "bernini_quality_source.mp4",
     output_prefix: str | None = None,
     prompt: str | None = None,
-    repack_root: str | None = None,
+    planner_name: str | None = None,
+    t5_name: str | None = None,
     high_renderer: str | None = None,
     low_renderer: str | None = None,
     renderer_loader: str = "bernini",
@@ -95,17 +96,16 @@ def prepare_graph(
     if task not in TASKS:
         raise ValueError(f"unsupported task: {task}")
     graph = json.loads((WORKFLOW_DIR / f"{task}.json").read_text(encoding="utf-8"))
-    if repack_root is not None:
-        graph["1"]["inputs"]["repack_manifest"] = f"{repack_root}/repack-manifest.json"
-        graph["2"]["inputs"]["repack_manifest"] = f"{repack_root}/repack-manifest.json"
-        graph["5"]["inputs"]["model_index"] = f"{repack_root}/wan_high/model.safetensors.index.json"
-        graph["6"]["inputs"]["model_index"] = f"{repack_root}/wan_low/model.safetensors.index.json"
+    if planner_name is not None:
+        graph["1"]["inputs"]["planner_name"] = planner_name
+    if t5_name is not None:
+        graph["2"]["inputs"]["clip_name"] = t5_name
     if (high_renderer is None) != (low_renderer is None):
         raise ValueError("--high-renderer and --low-renderer must be supplied together")
     if high_renderer is not None and low_renderer is not None:
         if renderer_loader == "bernini":
-            graph["5"]["inputs"]["model_index"] = high_renderer
-            graph["6"]["inputs"]["model_index"] = low_renderer
+            graph["5"]["inputs"]["unet_name"] = high_renderer
+            graph["6"]["inputs"]["unet_name"] = low_renderer
         elif renderer_loader == "native":
             for node_id, filename, title in (
                 ("5", high_renderer, "Load high-noise renderer"),
@@ -174,7 +174,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-video", default="bernini_quality_source.mp4")
     parser.add_argument("--output-prefix")
     parser.add_argument("--prompt")
-    parser.add_argument("--repack-root")
+    parser.add_argument("--planner-name")
+    parser.add_argument("--t5-name")
     parser.add_argument(
         "--high-renderer",
         help="High-noise renderer path/name, paired with --low-renderer.",
@@ -214,7 +215,8 @@ def main() -> None:
         source_video=args.source_video,
         output_prefix=args.output_prefix,
         prompt=args.prompt,
-        repack_root=args.repack_root,
+        planner_name=args.planner_name,
+        t5_name=args.t5_name,
         high_renderer=args.high_renderer,
         low_renderer=args.low_renderer,
         renderer_loader=args.renderer_loader,

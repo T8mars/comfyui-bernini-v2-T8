@@ -17,6 +17,7 @@ balanced-INT8 T2V acceptance uses the current 640x368, 33-frame test budget.
 | I2I | 512x512 PNG | 659.97 s | reference identity/composition preserved with requested change | `997d2359db10a8776e3b86d926b88c9e6c5c52ed8255872df22226555b29d0ce` |
 | T2V | 848x480, 81 frames, 5.0625 s | 4160.44 s | coherent fox walk with continuous motion | `b9b1446ac9c50516397646579b60ff696df7ecb178818945a084eadbf66c9571` |
 | T2V balanced INT8 | 640x368, 33 frames, 2.0625 s | 1651.98 s | sharp, coherent fox walk; no visible quantization collapse | `061c3380c7ace7f5d7c74f51fdbef45cfe89084c1523ae7baeb0dd131132442f` |
+| T2V standalone INT8 format gate | 640x368, 33 frames, 2.0625 s | 342.31 s | 5/2/10-step gate; recognizable coherent fox motion, 33 unique frames; not a production-quality preset | `3d1d1a96343f46314f85d03ee03b2f2ffcbac9cd2d05fb09a44664d28603c6e4` |
 | T2V external NVFP4 renderers | 640x368, 33 frames, 2.0625 s | 1518.03 s | coherent fox walk; no visible quantization collapse; CUDA 12.8 eager quality gate only | `4fb35e38321f19ad069ac7f7c6e0b5a414adcb466a0158398cfcbb3d5068786e` |
 | T2V GGUF Q4_K_S renderers | 640x368, 33 frames, 2.0625 s | 1319.91 s | coherent motion and 33 unique frames; mild facial softness and leg/tail merging; experimental | `8348dcc3baa37c782bd88867cf93dbd35622d9aef4b65454187d70724725f838` |
 | T2V current Core candidate | 640x368, 33 frames, 2.063 s | 1756.39 s | official 50/1/50 preset; sharp coherent fox walk, 33 unique frames | `df443d0e577af8e8ef36bf81b2d694cd683b7058ec44350d2dbf5c55d45c80d2` |
@@ -80,7 +81,7 @@ than a claim of pixel parity with the official pipeline.
 
 ## Balanced-INT8 T2V acceptance
 
-The recommended 45.62 GiB package quantizes both Wan experts, Qwen, and UMT5
+The recommended 45.63 GiB standalone set quantizes both Wan experts, Qwen, and UMT5
 with 1,300 stock-Comfy `int8_tensorwise` + ConvRot layers while retaining the
 connector, MaskGIT tokens, and VIT decoder in BF16. Per-layer reconstruction
 checks produced mean/min cosine 0.999954/0.999938 and mean/max relative error
@@ -103,6 +104,29 @@ VRAM, 29.885 GiB peak process RSS, and 50.149 GiB peak process VMS/commit on the
 This is a visual usability gate, not a pixelwise BF16 comparison: the accepted
 BF16 baseline used 848x480 and 81 frames, so its planned target and camera path
 differ. A same-geometry latent/prediction oracle remains a Core-readiness item.
+
+## Standalone-file acceptance
+
+The public runtime format was replaced with four standalone files in ComfyUI's
+standard model directories: Planner and UMT5 in `text_encoders`, plus one high-
+and one low-noise Wan file in `diffusion_models`. The exporter copies every
+weight and stock-Comfy quantization tensor byte-for-byte from the validated
+conversion workspace; only the safetensors header and embedded tokenizer/config
+payloads are rebuilt.
+
+Both INT8 and BF16 sets pass the strict single-file validator. Real construction
+also passes for Qwen language/vision, the Bernini auxiliary heads, Core Wan
+UMT5, and both 14.288B Wan experts, with no meta parameters left behind. The
+final INT8 set then completed a 640x368, 33-frame, 16-fps T2V run using 5
+MaskGIT, 2 VIT, and 10 renderer steps in 342.31 seconds. All 33 decoded frames
+are unique; the fox, snow scene, and running motion are recognizable and
+temporally coherent. Detail softness and tail/limb distortion remain at this
+reduced step budget, so this result is a format/runtime gate rather than a
+replacement for the production-step acceptance above.
+
+A preceding 1/1/2-step run produced only a blurred orange subject and was
+explicitly rejected as a quality result. It remains useful only as proof that
+the graph can encode a complete 2.0625-second video.
 
 ## External-NVFP4 T2V acceptance
 
@@ -236,7 +260,7 @@ pixel equality with the released output.
   24 GB Windows OOM observed in the first full-resolution video attempt.
 - The combined RV2V VAE context is regression-tested in the released
   reference-image-then-source-video order.
-- The complete Python suite passes 145 tests. Ruff lint passes and all 78 Python
+- The complete Python suite passes 148 tests. Ruff lint passes and all Python
   files pass `ruff format --check`.
 
 ## Remaining Core-readiness gates
