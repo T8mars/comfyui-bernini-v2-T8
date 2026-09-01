@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1 - 2026-09-01
+
+- Accept the full 64-bit ComfyUI seed range in MaskGIT planning.
+- Keep VIT flow schedules in FP32 and scope them to one sampling call.
+- Build Qwen additive attention masks directly in the planner compute dtype.
+- Remove an unused per-step target allocation.
+- Preserve one-character negative prompts.
+- Report clear visual-item and manifest-schema errors.
+- Clarify that GGUF support is an external renderer bridge, not a full native
+  Bernini package.
+
 ## 0.2.0 - 2026-09-01
 
 ### Added

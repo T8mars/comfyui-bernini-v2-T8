@@ -23,7 +23,8 @@ Bernini v2 会先用 Qwen2.5-VL 规划画面和动作，再交给 Wan2.2 双专�
 - 六种官方任务和可直接打开的示例工作流。
 - 自动低显存调度、顺序 CFG/APG 和双专家切换。
 - BF16 与原生 ComfyUI INT8 ConvRot 权重。
-- NVFP4、现代/旧版 scaled FP8 检测，以及标准 `MODEL` 接口的 GGUF 兼容。
+- 可识别 NVFP4、现代/旧版 scaled FP8；GGUF 仅通过外部
+  ComfyUI-GGUF 接入两个 Wan renderer，Planner 仍使用原生权重。
 
 ### 安装节点
 

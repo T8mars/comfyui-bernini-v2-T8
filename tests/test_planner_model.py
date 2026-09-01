@@ -31,6 +31,7 @@ def test_small_planner_modules_forward() -> None:
     assert connector.for_vit(x).shape == (2, 3, 8)
 
     decoder = DiffLossFM(target_channels=8, z_channels=8, depth=2, width=16)
+    assert not hasattr(decoder, "scheduler")
     output = decoder.net(torch.randn(4, 8), torch.ones(1), torch.randn(4, 8))
     assert output.shape == (4, 8)
 
@@ -47,7 +48,7 @@ def test_rms_norm_accepts_cpu_weight_with_cuda_input() -> None:
 
 def test_flow_scheduler_lands_at_zero() -> None:
     scheduler = FlowMatchScheduler(shift=2.0)
-    scheduler.set_timesteps(3, dtype=torch.float32)
+    scheduler.set_timesteps(3)
     assert len(scheduler.sigmas) == 3
     sample = torch.ones(1)
     result = scheduler.step(torch.ones(1), scheduler.timesteps[-1], sample)
@@ -56,7 +57,7 @@ def test_flow_scheduler_lands_at_zero() -> None:
 
 def test_flow_scheduler_extra_step_matches_official_formula() -> None:
     scheduler = FlowMatchScheduler(shift=2.0, extra_one_step=True)
-    scheduler.set_timesteps(4, denoising_strength=0.75, dtype=torch.float32)
+    scheduler.set_timesteps(4, denoising_strength=0.75)
     raw = torch.linspace(
         scheduler.sigma_min + (scheduler.sigma_max - scheduler.sigma_min) * 0.75,
         scheduler.sigma_min,
@@ -64,6 +65,15 @@ def test_flow_scheduler_extra_step_matches_official_formula() -> None:
     )[:-1]
     expected = scheduler.shift * raw / (1 + (scheduler.shift - 1) * raw)
     torch.testing.assert_close(scheduler.sigmas, expected)
+
+
+def test_flow_scheduler_keeps_high_step_schedule_unique_and_float32() -> None:
+    scheduler = FlowMatchScheduler(shift=2.0, extra_one_step=True)
+    scheduler.set_timesteps(100)
+    assert scheduler.sigmas.dtype == torch.float32
+    assert scheduler.timesteps.dtype == torch.float32
+    assert torch.unique(scheduler.sigmas).numel() == 100
+    assert torch.unique(scheduler.timesteps).numel() == 100
 
 
 def test_qwen_unused_lm_head() -> None:

@@ -121,8 +121,11 @@ GGUF is intentionally optional because ComfyUI does not load it natively. With
 Wan GGUF experts with its Wan-compatible model loaders and connect their
 standard `MODEL` outputs directly to `Bernini v2 Renderer Guider`. Keep the
 Bernini planner auxiliary components in the native package. This bridge does
-not add a GGUF dependency to the node pack and is not part of the future Core
-submission path.
+not add a GGUF dependency to the node pack and is not part of the Core PR.
+
+GGUF and NVFP4 remain external experimental renderer lanes. Neither has a
+published Bernini v2 end-to-end quality, speed, or memory acceptance result yet;
+the Balanced INT8 package remains the verified low-memory recommendation.
 
 The node pack deliberately does not wrap or vendor ComfyUI-GGUF's converter.
 Wan GGUF conversion has separate 5-D tensor repair and llama.cpp quantization

@@ -12,7 +12,7 @@
 | Standard guidance | source / text / target APG chain | Flow-velocity APG | Unit tests plus t2i/i2i/t2v/v2v/r2v real sampling |
 | rv2v guidance | separate video/image direct chain | Five-arm flow-velocity chain | Unit tests plus official-case long-edge-640 quality pass |
 | Source media | Image VAE streams, then video streams, then target | Standard Comfy VAE and ordered `context_latents` | Image/video paths pass; combined ordering regression and RV2V quality pass |
-| Low-memory weights | Official BF16 is the quality oracle | True-BF16 package plus architecture-aware stock-Comfy INT8 ConvRot; optional standard `MODEL` inputs accept NVFP4/FP8/GGUF loaders | BF16 and INT8 hashes/structure pass; balanced INT8 production visual gate in progress |
+| Low-memory weights | Official BF16 is the quality oracle | True-BF16 package plus architecture-aware stock-Comfy INT8 ConvRot; external standard `MODEL` inputs accept NVFP4/FP8/GGUF renderers | Balanced INT8 production visual gate passes; NVFP4/GGUF end-to-end acceptance is pending |
 | Lifecycle | Repeated calls reuse one pipeline | Comfy model patchers/offload with sequential planner and guidance arms | Two uncached 640x368, 33-frame balanced-INT8 jobs pass in one server; current-CUDA lane pending |
 
 ## Task coverage
@@ -36,4 +36,4 @@ separately in `QUALITY_TESTS.md`. The 33-frame conditional-video cases are an
 explicit 2.0625-second test override; the latest RV2V case also uses a
 long-edge-640 test budget. This custom-node package's versioned video workflows
 now default to 33 frames and a 640-pixel long edge for practical testing; a
-future Core example should explicitly restore the released 81-frame preset.
+public Core examples should explicitly restore the released 81-frame preset.

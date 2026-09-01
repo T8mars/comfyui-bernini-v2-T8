@@ -31,6 +31,7 @@ def prepare_graph(
     planning_steps: int = 1,
     vit_denoising_steps: int = 1,
     renderer_steps: int = 2,
+    seed: int = 42,
     reference_image: str = "bernini_reference.png",
     source_video: str = "bernini_source.mp4",
     match_source_size: bool = False,
@@ -58,6 +59,7 @@ def prepare_graph(
             "match_source_size": match_source_size,
             "planning_steps": planning_steps,
             "vit_denoising_steps": vit_denoising_steps,
+            "seed": seed,
         }
     )
     graph["12"]["inputs"].update(
@@ -71,6 +73,7 @@ def prepare_graph(
         }
     )
     graph["13"]["inputs"].update({"steps": renderer_steps, "use_task_defaults": False})
+    graph["14"]["inputs"]["noise_seed"] = seed
 
     if task in {"i2i", "r2v", "rv2v"}:
         graph["8"]["inputs"]["image"] = reference_image
@@ -147,6 +150,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--planning-steps", type=int, default=1)
     parser.add_argument("--vit-denoising-steps", type=int, default=1)
     parser.add_argument("--renderer-steps", type=int, default=2)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--reference-image", default="bernini_reference.png")
     parser.add_argument("--source-video", default="bernini_source.mp4")
     parser.add_argument("--match-source-size", action="store_true")
@@ -167,6 +171,7 @@ def main() -> None:
         planning_steps=args.planning_steps,
         vit_denoising_steps=args.vit_denoising_steps,
         renderer_steps=args.renderer_steps,
+        seed=args.seed,
         reference_image=args.reference_image,
         source_video=args.source_video,
         match_source_size=args.match_source_size,

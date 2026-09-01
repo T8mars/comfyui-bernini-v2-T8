@@ -229,7 +229,6 @@ class FlowMatchScheduler:
         denoising_strength: float = 1.0,
         shift: float | None = None,
         device=None,
-        dtype: torch.dtype = torch.bfloat16,
         training: bool = False,
     ) -> None:
         if shift is not None:
@@ -237,7 +236,13 @@ class FlowMatchScheduler:
         device = device or "cpu"
         sigma_start = self.sigma_min + (self.sigma_max - self.sigma_min) * denoising_strength
         count = num_inference_steps + 1 if self.extra_one_step else num_inference_steps
-        sigmas = torch.linspace(sigma_start, self.sigma_min, count, device=device, dtype=dtype)
+        sigmas = torch.linspace(
+            sigma_start,
+            self.sigma_min,
+            count,
+            device=device,
+            dtype=torch.float32,
+        )
         if self.extra_one_step:
             sigmas = sigmas[:-1]
         if self.inverse_timesteps:
@@ -305,7 +310,8 @@ class DiffLossFM(nn.Module):
             dtype=dtype,
             operations=operations,
         )
-        self.scheduler = FlowMatchScheduler(shift=shift, extra_one_step=extra_one_step)
+        self.scheduler_shift = shift
+        self.scheduler_extra_one_step = extra_one_step
 
     @torch.no_grad()
     def sample(
@@ -335,10 +341,14 @@ class DiffLossFM(nn.Module):
             sample_fn = self.net.forward
             kwargs = {"c": z}
 
-        self.scheduler.set_timesteps(num_inference_steps, device=device, dtype=z.dtype)
-        for timestep in self.scheduler.timesteps:
+        scheduler = FlowMatchScheduler(
+            shift=self.scheduler_shift,
+            extra_one_step=self.scheduler_extra_one_step,
+        )
+        scheduler.set_timesteps(num_inference_steps, device=device)
+        for timestep in scheduler.timesteps:
             prediction = sample_fn(samples, timestep.unsqueeze(0).to(z.dtype), **kwargs)
-            samples = self.scheduler.step(prediction, timestep, samples)
+            samples = scheduler.step(prediction, timestep, samples)
         return samples
 
 

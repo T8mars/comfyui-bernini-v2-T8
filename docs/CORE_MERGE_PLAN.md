@@ -45,8 +45,9 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
   the pinned official BF16 checkpoint for all six tasks. Conditional-video
   baselines use an explicit 33-frame (2.0625-second) duration override; the
   latest RV2V case also uses a long-edge-640 resource budget.
-- Planner and renderer tensors match the official implementation at agreed
-  checkpoints within BF16 tolerances.
+- Renderer scheduling and flow-UniPC tensors match the official implementation
+  within the recorded tolerances. Qwen hidden-state and VIT target oracle
+  comparisons remain pending.
 - The flow sigma fixture and the dedicated UniPC trajectory match Diffusers;
   1/2/3/8/50-step fixtures differ by at most about `3.6e-7`. The expert switch
   is observed in real sampling.
@@ -79,7 +80,7 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
 - Combined RV2V VAE streams must remain in reference-image-then-source-video
   order. Wan source ids and RoPE depend on stream position; reversing them
   passed execution smoke but failed the official garment-edit semantics.
-- The future public Core examples should retain the released 81-frame presets.
+- Public Core examples should retain the released 81-frame presets.
   This custom-node package deliberately defaults video examples and regression
   runners to 33 frames (2.0625 seconds) with a 640-pixel long edge so 24 GB / 64
   GB development hosts can exercise the complete path. The distinction must be

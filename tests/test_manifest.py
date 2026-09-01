@@ -27,6 +27,13 @@ def test_rejects_future_schema(tmp_path):
         load_repack_manifest(_manifest(tmp_path, schema_version=999))
 
 
+@pytest.mark.parametrize("schema", [None, "3", True, 3.0])
+def test_rejects_non_integer_schema_with_manifest_path(tmp_path, schema):
+    manifest = _manifest(tmp_path, schema_version=schema)
+    with pytest.raises(ValueError, match=r"invalid .*schema_version.*repack-manifest\.json"):
+        load_repack_manifest(manifest)
+
+
 def test_rejects_missing_runtime_component(tmp_path):
     with pytest.raises(ValueError, match="missing components"):
         load_repack_manifest(_manifest(tmp_path, outputs={"wan_high": {}}))

@@ -111,7 +111,7 @@ def split_reference_images(reference_images: dict[str, torch.Tensor] | None) -> 
 
 def maskgit_order(target_count: int, seed: int, device: torch.device | str = "cpu") -> torch.Tensor:
     """Return the official NumPy-seeded order as a PyTorch scatter index."""
-    order = np.random.RandomState(seed).permutation(target_count).astype(np.int64, copy=False)
+    order = np.random.RandomState(seed % (2**32)).permutation(target_count).astype(np.int64, copy=False)
     return torch.from_numpy(order).to(device=device)
 
 
@@ -343,7 +343,12 @@ def create_plan(
     )
     template = BerniniTemplate(runtime.tokenizer)
     counts = {"image": image_counts, "video": video_counts}
-    cond_tokens = template.encode(conversation, num_tokens=counts, task=task)
+    cond_tokens = template.encode(
+        conversation,
+        num_tokens=counts,
+        task=task,
+        mask_dtype=runtime.dtype,
+    )
     uncond_tokens = template.encode(
         conversation,
         num_tokens=counts,
@@ -352,6 +357,7 @@ def create_plan(
         drop_images=True,
         drop_videos=True,
         negative_prompt=negative_prompt,
+        mask_dtype=runtime.dtype,
     )
     image_cond_tokens = template.encode(
         conversation,
@@ -359,6 +365,7 @@ def create_plan(
         task=task,
         drop_images=True,
         drop_videos=True,
+        mask_dtype=runtime.dtype,
     )
 
     runtime.load_planner()
@@ -402,8 +409,6 @@ def create_plan(
             generator=generator,
         )
         current = current[: current.shape[0] // 3].unsqueeze(0).to(runtime.dtype)
-        target = cond["inputs"][:, cond["output_mask"], :]
-        target[:, indices, :] = current
         for branch in branches:
             branch_target = branch["inputs"][:, branch["output_mask"], :]
             branch_target[:, indices, :] = current

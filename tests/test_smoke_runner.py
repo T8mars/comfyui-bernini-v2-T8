@@ -10,7 +10,14 @@ SPEC.loader.exec_module(MODULE)
 
 def test_prepare_graph_overrides_every_task_without_mutating_examples():
     for task in MODULE.TASKS:
-        graph = MODULE.prepare_graph(task, width=320, height=192, length=5, renderer_steps=3)
+        graph = MODULE.prepare_graph(
+            task,
+            width=320,
+            height=192,
+            length=5,
+            renderer_steps=3,
+            seed=0xFFFFFFFFFFFFFFFF,
+        )
         plan = graph["11"]["inputs"]
         assert plan["width"] == 320
         assert plan["height"] == 192
@@ -24,6 +31,8 @@ def test_prepare_graph_overrides_every_task_without_mutating_examples():
         assert graph["12"]["inputs"]["omega_target"] == preset["omega_target"]
         assert graph["12"]["inputs"]["omega_scale"] == preset["omega_scale"]
         assert graph["13"]["inputs"]["steps"] == 3
+        assert plan["seed"] == 0xFFFFFFFFFFFFFFFF
+        assert graph["14"]["inputs"]["noise_seed"] == 0xFFFFFFFFFFFFFFFF
 
 
 def test_prepare_graph_sets_media_and_output_names():
