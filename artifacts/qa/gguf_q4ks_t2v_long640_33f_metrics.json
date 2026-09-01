@@ -1,0 +1,67 @@
+{
+  "task": "t2v",
+  "repeat": 1,
+  "renderer": {
+    "loader": "gguf",
+    "high": "Bernini_v2_GGUF\\bernini_v2_high_noise-Q4_K_S.gguf",
+    "low": "Bernini_v2_GGUF\\bernini_v2_low_noise-Q4_K_S.gguf"
+  },
+  "runs": [
+    {
+      "prompt_id": "151f58a2-1361-4737-aca5-3b73d7999aab",
+      "status": {
+        "status_str": "success",
+        "completed": true,
+        "messages": [
+          [
+            "execution_start",
+            {
+              "prompt_id": "151f58a2-1361-4737-aca5-3b73d7999aab",
+              "timestamp": 1788247584040
+            }
+          ],
+          [
+            "execution_cached",
+            {
+              "nodes": [],
+              "prompt_id": "151f58a2-1361-4737-aca5-3b73d7999aab",
+              "timestamp": 1788247584053
+            }
+          ],
+          [
+            "execution_success",
+            {
+              "prompt_id": "151f58a2-1361-4737-aca5-3b73d7999aab",
+              "timestamp": 1788248902473
+            }
+          ]
+        ]
+      },
+      "outputs": {
+        "19": {
+          "images": [
+            {
+              "filename": "t2v_gguf_q4ks_long640_00001_.mp4",
+              "subfolder": "Bernini-v2\\quality",
+              "type": "output"
+            }
+          ],
+          "animated": [
+            true
+          ]
+        }
+      },
+      "run": 1,
+      "elapsed_seconds": 1319.907
+    }
+  ],
+  "resources": {
+    "samples": 644,
+    "peak_vram_used_bytes": 22600424486,
+    "peak_vram_used_gib": 21.048,
+    "peak_process_rss_bytes": 36293132288,
+    "peak_process_rss_gib": 33.801,
+    "peak_process_vms_bytes": 48313556992,
+    "peak_process_vms_gib": 44.996
+  }
+}

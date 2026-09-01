@@ -17,8 +17,11 @@ projects and model releases:
 - Comfy-Org `comfy-kitchen` and `comfy-quants`. The converter emits their
   stock-Comfy quantization contract and calls the installed comfy-kitchen
   public layout API; no kernel or wheel is vendored.
-- `city96/ComfyUI-GGUF`. GGUF interoperability is an optional standard-`MODEL`
-  boundary only; its loader and conversion code are not bundled or required.
+- `city96/ComfyUI-GGUF`. GGUF interoperability uses its optional
+  standard-`MODEL` loader boundary. `tools/convert_sharded_gguf.py` adapts its
+  Apache-2.0 Wan tensor-precision policy and 5D post-quantization repair
+  workflow at revision `6ea2651e7df66d7585f6ffee804b20e92fb38b8a` to
+  stream indexed safetensors shards without loading a full expert.
 
 Each upstream project retains its own copyright and license notices. The node
 source repository does not vendor model weights; required weights are hosted in

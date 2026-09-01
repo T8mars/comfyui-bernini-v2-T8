@@ -132,23 +132,78 @@ constructing mixed-precision modules, and the pair validator reports it as
 
 GGUF is intentionally optional because ComfyUI does not load it natively. With
 [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) installed, load the two
-Wan GGUF experts with its Wan-compatible model loaders and connect their
-standard `MODEL` outputs directly to `Bernini v2 Renderer Guider`. Keep the
-Bernini planner auxiliary components in the native package. This bridge does
-not add a GGUF dependency to the node pack and is not part of the Core PR.
+Wan GGUF experts with `Unet Loader (GGUF)` and connect their standard `MODEL`
+outputs directly to `Bernini v2 Renderer Guider`. Keep the planner, Qwen, T5,
+connector, VIT decoder, mask tokens, and VAE in the native package. This bridge
+does not add a GGUF runtime dependency to the node pack and is not part of the
+Core PR.
 
-GGUF and NVFP4 remain external experimental renderer lanes. NVFP4 now has a
-production-step visual acceptance, but optimized speed, isolated memory, and
-repeat-lifecycle gates remain pending. No public Bernini v2 high/low GGUF pair
-was found in the referenced model repository or a Hugging Face model search, so
-GGUF still has no end-to-end acceptance. Balanced INT8 remains the verified
-low-memory recommendation.
+The published Q4_K_S pair occupies 16.31 GiB versus 26.70 GiB for the two
+Balanced-INT8 Wan components, a 38.9% renderer-storage reduction. Each file is
+8,756,353,664 bytes and contains 1,095 tensors: 356 Q4_K, 44 Q5_K, 6 BF16, and
+689 F32. Both contracts contain all 40 Wan blocks and the repaired F32 5-D
+`patch_embedding.weight`.
 
-The node pack deliberately does not wrap or vendor ComfyUI-GGUF's converter.
-Wan GGUF conversion has separate 5-D tensor repair and llama.cpp quantization
-steps, and its loader is the authority for that storage format. The integration
-boundary here is the standard Comfy `MODEL` type, so GGUF updates do not require
-changes to Bernini planning, guidance, sampling, or the future Core patch.
+- High SHA-256: `b72df0b32d305b7acade0a7245edde37716f7202f5fbc99fda43aedf5d1ebc87`
+- Low SHA-256: `d396d3dcf935deb5bb1d8e6c6735e644adfa23d277efe0c2865bba03d6b7c92b`
+- Contract SHA-256: `e779b82a06707b08f85d03e812293e4a14a96eccf00f189f239443e366351b76`
+
+Download directly into the GGUF loader's model directory:
+
+```powershell
+hf download t8star/Bernini-V2-Comfy `
+  --include "Bernini-v2-GGUF-Q4_K_S/*" `
+  --local-dir C:/path/to/ComfyUI/models/diffusion_models
+```
+
+The repository also provides a low-RAM conversion path for the indexed BF16
+source. It validates every shard header and uses GGUF's disk-backed spool, so
+only one source tensor is converted in memory at a time:
+
+```powershell
+python tools/convert_sharded_gguf.py `
+  --src C:/path/to/Bernini-v2-bf16-native/wan_high `
+  --dst C:/path/to/bernini_v2_high_noise-BF16.gguf `
+  --fix C:/path/to/bernini_v2_high_noise-5d.safetensors `
+  --temp-dir C:/path/to/large-temp-drive
+```
+
+Build `llama-quantize` from `llama.cpp` tag `b3962` with
+ComfyUI-GGUF revision `6ea2651e7df66d7585f6ffee804b20e92fb38b8a`
+`tools/lcpp.patch`, then quantize and repair atomically:
+
+```powershell
+python tools/quantize_gguf.py `
+  --src C:/path/to/bernini_v2_high_noise-BF16.gguf `
+  --dst C:/path/to/bernini_v2_high_noise-Q4_K_S.gguf `
+  --fix C:/path/to/bernini_v2_high_noise-5d.safetensors `
+  --quantizer C:/path/to/llama-quantize.exe `
+  --type Q4_K_S
+```
+
+Run the same two commands for `wan_low`, then verify the pair without loading
+its weights into Torch:
+
+```powershell
+python tools/validate_gguf_pair.py `
+  --high C:/path/to/bernini_v2_high_noise-Q4_K_S.gguf `
+  --low C:/path/to/bernini_v2_low_noise-Q4_K_S.gguf
+```
+
+The 640x368, 33-frame, 16-fps production-step T2V gate passes in 1,319.907
+seconds with 33/33 unique decoded frames. Motion and scene composition remain
+coherent with no frozen duplication or gross quantization noise. Compared with
+Balanced INT8, the face is softer and some frames show a slightly elongated
+front paw or mild rear-leg/tail merging. Q4_K_S is therefore accepted as an
+experimental low-storage renderer lane, not the default quality profile.
+
+That run used ComfyUI 0.33.0, PyTorch 2.7.0+cu128, `--lowvram`, and
+ComfyUI-GGUF's partial-compile compatibility path. Another GPU process was
+active, so its 21.048 GiB Comfy-visible peak, 33.801 GiB process RSS, and 44.996
+GiB process VMS are not isolated-memory claims. CUDA-13 optimized performance,
+repeat-lifecycle, and the other five task gates remain pending. Balanced INT8
+remains the recommended quality profile; NVFP4 remains the smallest validated
+renderer pair on Blackwell-capable hardware.
 
 ## Required regression matrix
 

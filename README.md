@@ -9,6 +9,7 @@ Wan 渲染器，因此可以正常卸载模型、使用低显存模式，并接�
 支持 `t2i`、`i2i`、`t2v`、`v2v`、`r2v` 和 `rv2v` 六种任务。
 
 > 推荐下载 Balanced INT8 权重：约 45.62 GiB。完整 BF16 版本约 83.03 GiB。
+> 实验性 GGUF Q4_K_S 双 renderer 合计 16.31 GiB，画质略低且需要 ComfyUI-GGUF。
 
 ## 中文
 
@@ -23,8 +24,9 @@ Bernini v2 会先用 Qwen2.5-VL 规划画面和动作，再交给 Wan2.2 双专�
 - 六种官方任务和可直接打开的示例工作流。
 - 自动低显存调度、顺序 CFG/APG 和双专家切换。
 - BF16 与原生 ComfyUI INT8 ConvRot 权重。
-- 可识别 NVFP4、现代/旧版 scaled FP8；GGUF 仅通过外部
-  ComfyUI-GGUF 接入两个 Wan renderer，Planner 仍使用原生权重。
+- 可识别 NVFP4、现代/旧版 scaled FP8；GGUF 通过外部 ComfyUI-GGUF
+  接入两个 Wan renderer，Planner 仍使用原生权重。
+- 提供低内存分片转 GGUF、原子量化/5D 回填和双专家合同校验工具。
 
 ### 安装节点
 
@@ -56,6 +58,15 @@ BF16 参考版本：
 hf download t8star/Bernini-V2-Comfy `
   --include "Bernini-v2-bf16-native/*" `
   --local-dir C:/path/to/ComfyUI/models/bernini_v2
+```
+
+实验性 Q4_K_S GGUF（先安装
+[`ComfyUI-GGUF`](https://github.com/city96/ComfyUI-GGUF)）：
+
+```powershell
+hf download t8star/Bernini-V2-Comfy `
+  --include "Bernini-v2-GGUF-Q4_K_S/*" `
+  --local-dir C:/path/to/ComfyUI/models/diffusion_models
 ```
 
 同一模型仓库还提供经过哈希核对的标准 Wan 2.1 VAE。直接下载到
@@ -98,6 +109,9 @@ ComfyUI/models/
 - 官方 50/1/50 步测试峰值 ComfyUI 可见显存约 23.26 GiB。
 - 外部 NVFP4 双 renderer 已通过 640×368、33 帧、25/5/40 步画质门；
   CUDA 13 优化速度和独占显存对比仍待验证。
+- Q4_K_S GGUF 双 renderer 已通过同规格画质门，33 帧全部唯一；双文件
+  16.31 GiB，相比 Balanced INT8 renderer 对减少 38.9%，但有轻微脸部变软和
+  腿/尾粘连，因此仍是实验档。
 - T2V、V2V、R2V、RV2V 的两秒长边 640 测试均通过。
 - 同一 ComfyUI 进程连续运行两个任务后，显存和内存可以回落。
 
@@ -127,6 +141,8 @@ python tools/quantize_repack.py `
 ```
 
 转换支持断点续跑；`validate_repack.py` 会检查索引、键、dtype、量化标记和 SHA-256。
+GGUF 的分片转换、量化和验证命令见
+[`docs/LOW_MEMORY_WEIGHTS.md`](docs/LOW_MEMORY_WEIGHTS.md)。
 
 ## English
 
@@ -167,6 +183,16 @@ hf download t8star/Bernini-V2-Comfy `
 Alternatively run
 `python tools/download_vae.py --output C:/path/to/ComfyUI/models/vae`.
 
+An experimental 16.31 GiB Q4_K_S renderer pair is also published. Install
+[`ComfyUI-GGUF`](https://github.com/city96/ComfyUI-GGUF), then download it to
+the diffusion-model directory:
+
+```powershell
+hf download t8star/Bernini-V2-Comfy `
+  --include "Bernini-v2-GGUF-Q4_K_S/*" `
+  --local-dir C:/path/to/ComfyUI/models/diffusion_models
+```
+
 Open a workflow from [`examples/workflows`](examples/workflows). Video examples
 use 33 frames at 16 fps with a 640-pixel long edge so the complete pipeline can
 be tested on a 24 GB GPU.
@@ -183,6 +209,11 @@ live in
 An external NVFP4 renderer pair also passes the production-step 640x368,
 33-frame T2V visual gate. This was a CUDA 12.8 eager-path quality run; CUDA 13
 optimized speed and isolated-memory results remain pending.
+
+The Q4_K_S GGUF pair passes the same 640x368, 33-frame production-step gate.
+All frames are unique and motion remains coherent, with mild facial softness
+and occasional leg/tail merging versus Balanced INT8. It is an experimental
+low-storage lane rather than the default quality recommendation.
 
 ```powershell
 python -m pytest

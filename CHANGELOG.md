@@ -2,13 +2,21 @@
 
 ## Unreleased
 
+## 0.2.3 - 2026-09-01
+
 - Add explicit native, Bernini-loader, and ComfyUI-GGUF renderer overrides to
   the production quality runner so the planner and renderer formats can be
   tested independently.
 - Normalize external model names for Windows ComfyUI servers and aggregate
   process-tree RSS/VMS when a virtual-environment launcher owns the server.
 - Record the first production-step external-NVFP4 T2V visual acceptance and
-  keep optimized CUDA-13 performance and GGUF acceptance as open gates.
+  keep optimized CUDA-13 performance as an open gate.
+- Add disk-spooled conversion from indexed Wan safetensors to base GGUF,
+  atomic Q4_K_S quantization/5D repair, recovery of completed intermediates,
+  and a high/low GGUF contract validator.
+- Publish the validated 16.31 GiB Q4_K_S renderer pair. Its 640x368, 33-frame
+  T2V gate passes with mild facial softness and occasional leg/tail merging;
+  Balanced INT8 remains the default quality recommendation.
 
 ## 0.2.2 - 2026-09-01
 

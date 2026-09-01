@@ -10,6 +10,7 @@ node.zip
 artifacts/metrics/
 artifacts/qa/int8_smoke_*
 artifacts/qa/*.framemd5
+artifacts/qa/*_t2v_mid12_20_grid.png
 *.py[cod]
 *.log
 *.pid
