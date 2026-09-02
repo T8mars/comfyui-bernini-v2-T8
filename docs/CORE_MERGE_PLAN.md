@@ -49,9 +49,9 @@ implementation, standard `CLIP`, `VAE`, `GUIDER`, `SIGMAS`, `SAMPLER`, and
   the pinned official BF16 checkpoint for all six tasks. Conditional-video
   baselines use an explicit 33-frame (2.0625-second) duration override; the
   latest RV2V case also uses a long-edge-640 resource budget.
-- Renderer scheduling and flow-UniPC tensors match the official implementation
-  within the recorded tolerances. Qwen hidden-state and VIT target oracle
-  comparisons remain pending.
+- Renderer scheduling, flow-UniPC, Qwen hidden-state, VIT target, and both Wan
+  expert prediction tensors match the official implementation within the
+  recorded tolerances in `TENSOR_PARITY.md`.
 - The flow sigma fixture and the dedicated UniPC trajectory match Diffusers;
   1/2/3/8/50-step fixtures differ by at most about `3.6e-7`. The expert switch
   is observed in real sampling.

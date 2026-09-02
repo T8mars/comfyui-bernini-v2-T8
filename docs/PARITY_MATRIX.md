@@ -2,12 +2,12 @@
 
 | Area | Official behavior | Native implementation | Gate |
 |---|---|---|---|
-| Renderer models | Wan2.2 high/low experts | Native Comfy Wan models | 1095/1095 keys each; real load and forward pass |
+| Renderer models | Wan2.2 high/low experts | Native Comfy Wan models | 1095/1095 keys each; official/native 40-block prediction tensor parity passes for both experts |
 | Expert switch | Timestep `< 875` uses low expert | One dual-expert guider at sigma `< 0.875` | Switch observed in real sampling, including full 50-step T2I |
 | Scheduler | UniPC order 2, BH2, flow prediction | Dedicated flow UniPC sampler plus exact sigma node | Diffusers stepwise fixture at 1/2/3/8/50 steps; max error about `3.6e-7` |
-| Planner LM | Qwen2.5-VL hidden state `[-2]` | Native Comfy Qwen layer 26 output | Real forward pass; oracle tensor comparison pending |
+| Planner LM | Qwen2.5-VL hidden state `[-2]` | Native Comfy Qwen layer 26 output | Real BF16 oracle passes: NRMSE `0.002838`, cosine `1.0` |
 | Planner branches | cond / uncond / text-only | Three native branches | Structural tests and six-task real forward pass |
-| VIT generation | MaskGIT + flow decoder | Native VIT decoder | Real forward pass; oracle tensor comparison pending |
+| VIT generation | MaskGIT + flow decoder | Native VIT decoder | Real BF16 oracle target passes elementwise; cosine `0.999907` |
 | Renderer text | BF16 UMT5 with task system prefix, official negative; cropped T5 then Qwen | Explicit BF16 Wan T5, official example text, cropped concat/padding | Production-setting T2I/I2I/video passes plus unit tests |
 | Standard guidance | source / text / target APG chain | Flow-velocity APG | Unit tests plus t2i/i2i/t2v/v2v/r2v real sampling |
 | rv2v guidance | separate video/image direct chain | Five-arm flow-velocity chain | Unit tests plus official-case long-edge-640 quality pass |

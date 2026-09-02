@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add reproducible official/native BF16 tensor gates for Planner hidden state,
+  VIT target, and both full 40-block Wan expert predictions. Align native Qwen
+  GQA expansion, RoPE dtype, and RMSNorm arithmetic with the official model.
 - Record that Comfy Registry release 0.3.3 is Active and that Core PR #16019 is
   mergeable with all checks passing and no unresolved review threads.
 - Add the clean-reboot, no-competing-GPU Core-only official 50/1/50 T2V rerun:

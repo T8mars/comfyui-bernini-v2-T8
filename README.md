@@ -124,7 +124,9 @@ ComfyUI/models/
 
 详细数据见 [`docs/QUALITY_TESTS.md`](docs/QUALITY_TESTS.md)、
 [`docs/SMOKE_TESTS.md`](docs/SMOKE_TESTS.md) 和
-[`docs/LOW_MEMORY_WEIGHTS.md`](docs/LOW_MEMORY_WEIGHTS.md)。
+[`docs/LOW_MEMORY_WEIGHTS.md`](docs/LOW_MEMORY_WEIGHTS.md)。官方/原生逐张量
+对齐的输入、阈值和真实权重结果见
+[`docs/TENSOR_PARITY.md`](docs/TENSOR_PARITY.md)。
 
 原生 Core 实现已提交到
 [ComfyUI PR #16019](https://github.com/Comfy-Org/ComfyUI/pull/16019)。旧的分片方案

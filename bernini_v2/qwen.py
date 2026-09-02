@@ -11,6 +11,52 @@ import torch
 import torch.nn.functional as F
 
 
+def _explicit_gqa_attention(attention):
+    """Match Qwen2.5-VL's explicit KV-head expansion before attention."""
+
+    def wrapped(query, key, value, heads, **kwargs):
+        if kwargs.pop("enable_gqa", False) and key.shape[1] != query.shape[1]:
+            if query.shape[1] % key.shape[1]:
+                raise ValueError("Qwen query heads must be divisible by key/value heads")
+            repeats = query.shape[1] // key.shape[1]
+            key = key[:, :, None, :, :].expand(-1, -1, repeats, -1, -1).reshape_as(query)
+            value = value[:, :, None, :, :].expand(-1, -1, repeats, -1, -1).reshape_as(query)
+        return attention(query, key, value, heads, **kwargs)
+
+    return wrapped
+
+
+def _official_qwen_rms_norm(norm, hidden_states: torch.Tensor) -> torch.Tensor:
+    """Use the unfused Qwen RMSNorm arithmetic from the reference model."""
+
+    input_dtype = hidden_states.dtype
+    normalized = hidden_states.float()
+    variance = normalized.pow(2).mean(-1, keepdim=True)
+    normalized = normalized * torch.rsqrt(variance + norm.eps)
+    weight = norm.weight.to(device=hidden_states.device, dtype=input_dtype)
+    return weight * normalized.to(input_dtype)
+
+
+def _official_qwen_layer_forward(layer, hidden_states, attention_mask, freqs_cis, attention):
+    """Run a native Comfy Qwen block with the official block arithmetic."""
+
+    residual = hidden_states
+    hidden_states = _official_qwen_rms_norm(layer.input_layernorm, hidden_states)
+    hidden_states, present_key_value = layer.self_attn(
+        hidden_states=hidden_states,
+        attention_mask=attention_mask,
+        freqs_cis=freqs_cis,
+        optimized_attention=attention,
+        past_key_value=None,
+    )
+    hidden_states = residual + hidden_states
+
+    residual = hidden_states
+    hidden_states = _official_qwen_rms_norm(layer.post_attention_layernorm, hidden_states)
+    hidden_states = layer.mlp(hidden_states)
+    return residual + hidden_states, present_key_value
+
+
 def apply_qwen_vision_rope(
     query: torch.Tensor,
     key: torch.Tensor,
@@ -235,19 +281,13 @@ def plan_forward(
     x = inputs_embeds.clone()
     if position_ids.ndim == 3 and position_ids.shape[1] == 1:
         position_ids = position_ids.squeeze(1)
-    freqs_cis = model.compute_freqs_cis(position_ids, x.device)
+    freqs_cis = tuple(value.to(x.dtype) for value in model.compute_freqs_cis(position_ids, x.device))
     mask = additive_attention_mask.unsqueeze(1)
-    attention = optimized_attention_for_device(x.device, mask=True, small_input=True)
+    attention = _explicit_gqa_attention(optimized_attention_for_device(x.device, mask=True, small_input=True))
     target = len(model.layers) + intermediate_output if intermediate_output < 0 else intermediate_output
     intermediate = None
     for index, layer in enumerate(model.layers):
-        x, _ = layer(
-            x=x,
-            attention_mask=mask,
-            freqs_cis=freqs_cis,
-            optimized_attention=attention,
-            past_key_value=None,
-        )
+        x, _ = _official_qwen_layer_forward(layer, x, mask, freqs_cis, attention)
         if index == target:
             intermediate = x.clone()
     if intermediate is None:

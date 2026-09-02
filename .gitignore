@@ -8,6 +8,7 @@ __pycache__/
 .publish-env/
 node.zip
 artifacts/metrics/
+artifacts/parity/
 artifacts/hf-release/
 artifacts/single-file-*/
 artifacts/qa/int8_smoke_*

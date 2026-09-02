@@ -105,8 +105,6 @@ jobs in the same legacy-PyTorch server. It derives its graph from the versioned
 - Visual quality is deliberately outside this 1/1/2-step suite. Separate
   production-setting baselines now cover T2I, I2I, T2V, official-case V2V,
   five-reference R2V, and official-case RV2V; see `QUALITY_TESTS.md`.
-- Planner hidden-state, VIT target, Wan prediction, and UniPC step tensors
-  against the official Diffusers implementation within agreed tolerances
 - Repeated long-video regression beyond the completed 81-frame T2V baseline
 - Repeated prompts in one process on a current PyTorch/CUDA 13 stack; the
   PyTorch 2.7/CUDA 12.8 compatibility lane now passes

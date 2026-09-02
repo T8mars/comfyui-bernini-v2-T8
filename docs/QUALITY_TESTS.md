@@ -293,18 +293,19 @@ pixel equality with the released output.
   trajectory difference in the deterministic fixture was about `3.6e-7`.
 - The native Qwen2.5-VL MRoPE indices matched the official function element for
   element on representative image and video token sequences.
+- The official/native BF16 tensor gates now pass for Planner hidden state, VIT
+  target, and both 40-block Wan expert predictions. See `TENSOR_PARITY.md` for
+  fixtures, thresholds, and recorded metrics.
 - Both Wan experts switch in one continuous sampler history. The loader now
   reserves estimated activation memory before each switch; this prevents the
   24 GB Windows OOM observed in the first full-resolution video attempt.
 - The combined RV2V VAE context is regression-tested in the released
   reference-image-then-source-video order.
-- The complete Python suite passes 148 tests. Ruff lint passes and all Python
+- The complete Python suite passes 169 tests. Ruff lint passes and all Python
   files pass `ruff format --check`.
 
 ## Remaining Core-readiness gates
 
-- Official-vs-native planner hidden state, VIT target, and Wan prediction tensor
-  comparisons within agreed BF16 tolerances
 - Repeated prompts in one process on a current supported PyTorch/CUDA stack
 - Interrupted download/repack recovery and Linux execution
 - A final upstream-friendly split and review against current ComfyUI Core
